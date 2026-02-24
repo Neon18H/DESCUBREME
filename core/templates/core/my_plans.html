@@ -13,7 +13,7 @@
           <div class="col-12 col-md-6">
             <div class="glass-card p-3">
               <h3 class="h5">{{ plan.title }}</h3>
-              <p class="text-soft mb-2">{{ plan.city }} · {{ plan.created_at|date:'d M Y' }}</p>
+              <p class="text-soft mb-2">{{ plan.city_name|default:plan.city }} · {{ plan.created_at|date:'d M Y' }}</p>
               <div class="d-flex gap-2">
                 <a href="{% url 'public_plan_detail' plan.id %}" class="btn btn-sm app-btn app-btn-secondary">Ver</a>
                 <button class="btn btn-sm app-btn app-btn-primary js-toggle-public" data-plan-id="{{ plan.id }}">{% if plan.is_public %}Público{% else %}Compartir{% endif %}</button>

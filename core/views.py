@@ -30,6 +30,7 @@ from core.models import (
     PlanSave,
     UserProfile,
 )
+from core.services.geolocation import GeolocationError, resolve_city_from_coordinates
 from core.services.planner import PlanGenerationError, generate_plan_from_prompt
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,28 @@ def landing(request):
     return render(request, 'core/home.html')
 
 
+def _parse_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _user_preferences(user):
+    if not user.is_authenticated:
+        return {}
+    profile = getattr(user, 'profile', None)
+    if not profile:
+        return {}
+    return {
+        'likes': profile.likes_tags,
+        'avoid': profile.avoid_tags,
+        'hobbies': profile.hobbies_tags,
+        'budget_min_cop': profile.budget_min_cop,
+        'budget_max_cop': profile.budget_max_cop,
+        'preferred_vibes': profile.preferred_vibes,
+    }
+
 @require_POST
 def api_generate_plan(request):
     try:
@@ -122,11 +145,37 @@ def api_generate_plan(request):
     if len(user_prompt) < 8:
         return JsonResponse({'error': 'Describe mejor tu plan (mínimo 8 caracteres).'}, status=400)
 
+    lat = _parse_float(payload.get('lat'))
+    lng = _parse_float(payload.get('lng'))
+    city_name = (payload.get('city_name') or '').strip()
+    country_code = (payload.get('country_code') or 'CO').strip().upper()[:2] or 'CO'
+
+    if lat is not None and lng is not None:
+        try:
+            resolved = resolve_city_from_coordinates(lat, lng)
+        except GeolocationError:
+            resolved = None
+        if resolved:
+            city_name = resolved.city_name
+            country_code = resolved.country_code
+
+    if not city_name and request.user.is_authenticated and getattr(request.user, 'profile', None):
+        city_name = request.user.profile.city or request.user.profile.city_default
+
+    city_name = city_name or 'Medellín'
+
     try:
-        result = generate_plan_from_prompt(user_prompt)
+        result = generate_plan_from_prompt(
+            user_prompt,
+            city_name=city_name,
+            lat=lat,
+            lng=lng,
+            user_preferences=_user_preferences(request.user),
+        )
     except PlanGenerationError as exc:
         return JsonResponse({'error': str(exc)}, status=502)
 
+    result['resolved_location'] = {'city_name': city_name, 'country_code': country_code}
     return JsonResponse(result)
 
 
@@ -140,13 +189,17 @@ def api_save_plan(request):
 
     parsed = payload.get('parsed_request') or {}
     windows = payload.get('time_windows') or []
-    city = parsed.get('city') or 'Ciudad'
+    city = parsed.get('city') or payload.get('city_name') or 'Ciudad'
+    country_code = (payload.get('country_code') or parsed.get('country') or 'CO').upper()[:2]
 
     plan = Plan.objects.create(
         owner=request.user,
         title=payload.get('title') or f"Plan en {city}",
         city=city,
+        city_name=city,
         city_slug=slugify(city),
+        country_code=country_code,
+        is_shared=bool(payload.get('is_shared')),
         mood=parsed.get('mood', ''),
         group=parsed.get('group', ''),
         budget_cop=parsed.get('budget_cop'),
@@ -184,11 +237,12 @@ def city_feed(request, city_slug):
         joins_count=Count('joins', distinct=True),
         comments_count=Count('comments', distinct=True),
     )
+    plans = plans.order_by('-shared_at', '-created_at')
     from django.core.paginator import Paginator
 
     paginator = Paginator(plans, 9)
     page_obj = paginator.get_page(request.GET.get('page', 1))
-    city_name = plans.first().city if plans.exists() else city_slug.replace('-', ' ').title()
+    city_name = plans.first().city_name if plans.exists() else city_slug.replace('-', ' ').title()
     return render(request, 'core/city_feed.html', {'page_obj': page_obj, 'city_name': city_name, 'city_slug': city_slug})
 
 
@@ -208,6 +262,7 @@ def public_plan_detail(request, plan_id):
         'joins_count': plan.joins.count(),
         'comments': plan.comments.select_related('user', 'user__profile').all(),
         'comment_form': CommentForm(),
+        'can_socialize': plan.is_shared,
     }
     return render(request, 'core/plan_detail.html', context)
 
@@ -231,7 +286,7 @@ def toggle_plan_public(request, plan_id):
     plan.is_public = plan.is_shared
     plan.shared_at = timezone.now() if plan.is_shared else None
     plan.save(update_fields=['is_shared', 'is_public', 'shared_at', 'updated_at'])
-    return JsonResponse({'ok': True, 'is_shared': plan.is_shared, 'share_url': f'/p/{plan.id}/'})
+    return JsonResponse({'ok': True, 'is_shared': plan.is_shared, 'is_public': plan.is_shared, 'share_url': f'/p/{plan.id}/'})
 
 
 @login_required
@@ -270,7 +325,7 @@ def plan_unjoin(request, plan_id):
 @login_required
 @require_POST
 def plan_comment(request, plan_id):
-    plan = get_object_or_404(Plan, id=plan_id)
+    plan = get_object_or_404(Plan, id=plan_id, is_shared=True)
     if not plan.is_shared and plan.owner != request.user:
         return HttpResponseForbidden('No tienes acceso a este plan.')
     form = CommentForm(request.POST)

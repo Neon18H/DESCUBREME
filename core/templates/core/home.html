@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Descúbreme · Planes con vibe{% endblock %}
 {% block content %}
 <section class="hero-wrap pt-5">
@@ -7,21 +8,23 @@
       <p class="micro-eyebrow mb-2">PLANEA SIN FRICCIÓN</p>
       <h1 class="hero-title">Tu plan ideal, en segundos.</h1>
       <p class="hero-subtitle mx-auto">Cuéntame tu mood y te devuelvo una ruta inteligente para tarde y noche, con lugares reales y presupuesto aterrizado.</p>
-      <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
-        <span class="chip">Alegre</span>
-        <span class="chip">Chill</span>
-        <span class="chip">Romántico</span>
-        <span class="chip">Low cost</span>
-      </div>
     </div>
 
     <div class="chat-shell mx-auto p-3 p-md-4 mt-4 fade-up">
       <label for="chatPrompt" class="form-label micro-label">Describe tu plan</label>
+      <input type="hidden" id="lat" name="lat">
+      <input type="hidden" id="lng" name="lng">
+      <input type="hidden" id="cityName" name="city_name">
+      <p id="locationStatus" class="small text-soft mb-2">Detectando ubicación…</p>
       <div class="chat-input-wrap">
         <textarea id="chatPrompt" class="form-control chat-input" rows="2" placeholder="Estoy alegre, quiero plan tarde chill y noche con amigos, presupuesto 120k…"></textarea>
         <button id="generatePlanBtn" class="btn app-btn app-btn-primary chat-send-btn" type="button">
           <i class="bi bi-magic me-1"></i>Generar plan
         </button>
+      </div>
+      <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" id="isShared">
+        <label class="form-check-label" for="isShared">Compartir públicamente en mi ciudad</label>
       </div>
       <small class="text-soft d-block mt-2">Enter para generar · Shift + Enter para salto de línea.</small>
       <p id="planError" class="text-danger mt-2 mb-0 d-none"></p>
@@ -35,4 +38,34 @@
     <div id="resultsRoot" class="results-root"></div>
   </div>
 </section>
+
+<div class="modal fade" id="manualCityModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-light">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">Permite ubicación para planes cerca de ti</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label for="manualCity" class="form-label">Elegir ciudad manualmente</label>
+        <select id="manualCity" class="form-select">
+          <option value="medellin">Medellín</option>
+          <option value="bogota">Bogotá</option>
+          <option value="cali">Cali</option>
+          <option value="barranquilla">Barranquilla</option>
+          <option value="cartagena">Cartagena</option>
+        </select>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" id="saveManualCity" class="btn btn-primary">Continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/csrf.js' %}"></script>
+<script src="{% static 'js/geolocation.js' %}"></script>
+<script src="{% static 'js/generate_plan.js' %}"></script>
 {% endblock %}

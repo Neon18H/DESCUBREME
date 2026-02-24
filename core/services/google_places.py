@@ -33,15 +33,15 @@ def _build_photo_url(photo_reference: str) -> str:
     )
 
 
-def search_places(query: str, city: str, limit: int = 3) -> list[dict[str, Any]]:
+def search_places(query: str, city: str, limit: int = 3, lat: float | None = None, lng: float | None = None) -> list[dict[str, Any]]:
     if not settings.GOOGLE_PLACES_API_KEY:
         raise GooglePlacesAPIError('GOOGLE_PLACES_API_KEY no configurada.')
 
     full_query = f'{query} en {city}' if city else query
-    payload = _safe_get(
-        TEXT_SEARCH_URL,
-        {'query': full_query, 'language': 'es', 'region': 'co', 'key': settings.GOOGLE_PLACES_API_KEY},
-    )
+    params = {'query': full_query, 'language': 'es', 'region': 'co', 'key': settings.GOOGLE_PLACES_API_KEY}
+    if lat is not None and lng is not None:
+        params.update({'location': f'{lat},{lng}', 'radius': 6500})
+    payload = _safe_get(TEXT_SEARCH_URL, params)
 
     status = payload.get('status')
     if status == 'ZERO_RESULTS':

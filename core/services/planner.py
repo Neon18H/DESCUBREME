@@ -32,20 +32,27 @@ def _window_queries(window: dict, city: str) -> list[str]:
     return list(OrderedDict.fromkeys(combos))
 
 
-def generate_plan_from_prompt(prompt: str, places_per_window: int = 3) -> dict:
+def generate_plan_from_prompt(
+    prompt: str,
+    places_per_window: int = 3,
+    city_name: str = '',
+    lat: float | None = None,
+    lng: float | None = None,
+    user_preferences: dict | None = None,
+) -> dict:
     try:
-        parsed = validate_parsed_json(parse_user_prompt(prompt))
+        parsed = validate_parsed_json(parse_user_prompt(prompt, city_name=city_name, lat=lat, lng=lng, user_preferences=user_preferences))
     except OpenRouterError as exc:
         raise PlanGenerationError(str(exc)) from exc
 
     enriched_windows = []
     for window in parsed['time_windows']:
-        city = parsed.get('city', '')
+        city = city_name or parsed.get('city', '')
         all_places = []
         seen_ids = set()
         for query in _window_queries(window, city):
             try:
-                results = search_places(query=query, city=city, limit=places_per_window)
+                results = search_places(query=query, city=city, limit=places_per_window, lat=lat, lng=lng)
             except GooglePlacesAPIError as exc:
                 raise PlanGenerationError(str(exc)) from exc
             for place in results:
@@ -56,4 +63,6 @@ def generate_plan_from_prompt(prompt: str, places_per_window: int = 3) -> dict:
                 all_places.append(place)
         enriched_windows.append({**window, 'places': all_places[:places_per_window + 1]})
 
+    if city_name:
+        parsed['city'] = city_name
     return {'prompt': prompt, 'parsed_request': parsed, 'time_windows': enriched_windows}
