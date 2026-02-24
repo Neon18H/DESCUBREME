@@ -6,15 +6,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
 from django.db import transaction
-from django.db.models import F
-from django.http import JsonResponse
+from django.db.models import F, Q
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from core.forms import RegisterForm, UserProfileForm
-from core.models import Plan, PlanItem, PlanLike, PlanSave
+from core.forms import ProfileForm, RegisterForm
+from core.models import FriendRequest, Friendship, Plan, PlanItem, PlanLike, PlanSave
 from core.services.planner import PlanGenerationError, generate_plan_from_prompt
 
 
@@ -27,6 +27,32 @@ class AppLoginView(LoginView):
 
 class AppLogoutView(LogoutView):
     next_page = 'landing'
+
+
+def _friendship_status(viewer, owner):
+    if not viewer.is_authenticated or viewer == owner:
+        return {'state': 'self' if viewer == owner else 'anon'}
+
+    if Friendship.are_friends(viewer, owner):
+        return {'state': 'friends'}
+
+    sent_request = FriendRequest.objects.filter(
+        from_user=viewer,
+        to_user=owner,
+        status=FriendRequest.Status.PENDING,
+    ).first()
+    if sent_request:
+        return {'state': 'sent', 'request': sent_request}
+
+    received_request = FriendRequest.objects.filter(
+        from_user=owner,
+        to_user=viewer,
+        status=FriendRequest.Status.PENDING,
+    ).first()
+    if received_request:
+        return {'state': 'received', 'request': received_request}
+
+    return {'state': 'none'}
 
 
 def register_view(request):
@@ -173,22 +199,114 @@ def toggle_plan_like(request, plan_id):
 @require_GET
 def public_profile(request, username):
     owner = get_object_or_404(User.objects.select_related('profile'), username=username)
-    plans = Plan.objects.filter(owner=owner, is_public=True)
-    return render(request, 'core/profile.html', {'owner': owner, 'plans': plans})
+    relation = _friendship_status(request.user, owner)
+    can_view_plans = True
+    if owner.profile.is_private and relation.get('state') not in {'self', 'friends'}:
+        can_view_plans = False
+    plans = Plan.objects.filter(owner=owner, is_public=True) if can_view_plans else Plan.objects.none()
+    context = {'owner': owner, 'plans': plans, 'friendship': relation, 'can_view_plans': can_view_plans}
+    return render(request, 'core/profile_detail.html', context)
 
 
 @login_required
 def profile_settings(request):
     profile = request.user.profile
     if request.method == 'POST':
-        form = UserProfileForm(request.POST, instance=profile)
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Perfil actualizado.')
             return redirect('profile_settings')
     else:
-        form = UserProfileForm(instance=profile)
+        form = ProfileForm(instance=profile)
     return render(request, 'core/profile_edit.html', {'form': form})
+
+
+@login_required
+@require_GET
+def friends_search(request):
+    q = (request.GET.get('q') or '').strip()
+    results = User.objects.none()
+    if q:
+        results = User.objects.select_related('profile').filter(
+            Q(username__icontains=q) | Q(profile__display_name__icontains=q)
+        ).exclude(id=request.user.id)[:30]
+    return render(request, 'core/friends_search.html', {'results': results, 'q': q})
+
+
+@login_required
+@require_GET
+def requests_list(request):
+    received = FriendRequest.objects.select_related('from_user__profile').filter(to_user=request.user, status=FriendRequest.Status.PENDING)
+    sent = FriendRequest.objects.select_related('to_user__profile').filter(from_user=request.user, status=FriendRequest.Status.PENDING)
+    return render(request, 'core/requests.html', {'received': received, 'sent': sent})
+
+
+@login_required
+@require_POST
+def send_friend_request(request, user_id):
+    target = get_object_or_404(User.objects.select_related('profile'), id=user_id)
+    if target == request.user:
+        messages.error(request, 'No puedes agregarte a ti.')
+        return redirect(request.META.get('HTTP_REFERER', 'friends_search'))
+    if Friendship.are_friends(request.user, target):
+        messages.info(request, 'Ya son amigos.')
+        return redirect(request.META.get('HTTP_REFERER', 'friends_search'))
+    if not target.profile.allow_friend_requests:
+        messages.error(request, 'Este usuario no recibe solicitudes de amistad.')
+        return redirect(request.META.get('HTTP_REFERER', 'friends_search'))
+
+    FriendRequest.objects.get_or_create(
+        from_user=request.user,
+        to_user=target,
+        status=FriendRequest.Status.PENDING,
+    )
+    messages.success(request, 'Solicitud enviada.')
+    return redirect(request.META.get('HTTP_REFERER', 'friends_search'))
+
+
+@login_required
+@require_POST
+def accept_friend_request(request, request_id):
+    friend_request = get_object_or_404(FriendRequest, id=request_id, to_user=request.user, status=FriendRequest.Status.PENDING)
+    with transaction.atomic():
+        Friendship.objects.get_or_create(user1=friend_request.from_user, user2=friend_request.to_user)
+        friend_request.status = FriendRequest.Status.ACCEPTED
+        friend_request.save(update_fields=['status', 'updated_at'])
+    messages.success(request, 'Ahora son amigos.')
+    return redirect('requests_list')
+
+
+@login_required
+@require_POST
+def reject_friend_request(request, request_id):
+    friend_request = get_object_or_404(FriendRequest, id=request_id, to_user=request.user, status=FriendRequest.Status.PENDING)
+    friend_request.status = FriendRequest.Status.REJECTED
+    friend_request.save(update_fields=['status', 'updated_at'])
+    messages.info(request, 'Solicitud rechazada.')
+    return redirect('requests_list')
+
+
+@login_required
+@require_POST
+def remove_friend(request, user_id):
+    other = get_object_or_404(User, id=user_id)
+    user1, user2 = sorted([request.user.id, other.id])
+    deleted, _ = Friendship.objects.filter(user1_id=user1, user2_id=user2).delete()
+    if not deleted:
+        return HttpResponseForbidden('No son amigos.')
+    messages.info(request, 'Amistad eliminada.')
+    return redirect(request.META.get('HTTP_REFERER', 'friends_list'))
+
+
+@login_required
+@require_GET
+def friends_list(request):
+    friendships = Friendship.objects.select_related('user1__profile', 'user2__profile').filter(
+        Q(user1=request.user) | Q(user2=request.user)
+    )
+    friends = [f.user2 if f.user1 == request.user else f.user1 for f in friendships]
+    return render(request, 'core/friends_list.html', {'friends': friends})
 
 
 @login_required

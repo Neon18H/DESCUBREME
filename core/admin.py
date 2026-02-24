@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from core.models import Plan, PlanItem, PlanLike, PlanSave, UserProfile
+from core.models import FriendRequest, Friendship, Plan, PlanItem, PlanLike, PlanSave, UserProfile
 
 
 class PlanItemInline(admin.TabularInline):
@@ -18,8 +18,21 @@ class PlanAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'display_name', 'city_default', 'updated_at')
+    list_display = ('user', 'display_name', 'city_default', 'is_private', 'allow_friend_requests', 'updated_at')
     search_fields = ('user__username', 'display_name', 'city_default')
+
+
+@admin.register(FriendRequest)
+class FriendRequestAdmin(admin.ModelAdmin):
+    list_display = ('from_user', 'to_user', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('from_user__username', 'to_user__username')
+
+
+@admin.register(Friendship)
+class FriendshipAdmin(admin.ModelAdmin):
+    list_display = ('user1', 'user2', 'created_at')
+    search_fields = ('user1__username', 'user2__username')
 
 
 admin.site.register(PlanItem)

@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Buscar amigos{% endblock %}
+{% block content %}
+<section class="container py-4">
+  <div class="glass-card p-4 mb-3">
+    <h1 class="h4">Buscar personas</h1>
+    <form class="d-flex gap-2" method="get">
+      <input class="form-control" name="q" value="{{ q }}" placeholder="Nombre o @usuario">
+      <button class="btn app-btn app-btn-primary">Buscar</button>
+    </form>
+  </div>
+  <div class="row g-3">
+    {% for person in results %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="glass-card p-3 h-100">
+          <div class="d-flex align-items-center gap-2 mb-3">
+            {% if person.profile.avatar %}<img src="{{ person.profile.avatar.url }}" class="profile-avatar-sm">{% else %}<div class="avatar-placeholder small">{{ person.profile.display_name|slice:':1'|upper }}</div>{% endif %}
+            <div><strong>{{ person.profile.display_name }}</strong><div class="text-soft small">@{{ person.username }}</div></div>
+          </div>
+          <p class="small text-soft">{{ person.profile.city_default|default:'Ciudad no definida' }}</p>
+          <div class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-light" href="{% url 'public_profile' person.username %}">Ver perfil</a>
+            <form method="post" action="{% url 'send_friend_request' person.id %}">{% csrf_token %}<button class="btn btn-sm app-btn app-btn-primary">Agregar</button></form>
+          </div>
+        </div>
+      </div>
+    {% empty %}<p class="text-soft">Busca para ver resultados.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Amigos{% endblock %}
+{% block content %}
+<section class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h4 mb-0">Tus amigos</h1>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-light btn-sm" href="{% url 'requests_list' %}">Solicitudes</a>
+      <a class="btn app-btn app-btn-primary btn-sm" href="{% url 'friends_search' %}">Buscar</a>
+    </div>
+  </div>
+  <div class="row g-3">
+    {% for friend in friends %}
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="glass-card p-3 h-100">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            {% if friend.profile.avatar %}<img src="{{ friend.profile.avatar.url }}" class="profile-avatar-sm">{% else %}<div class="avatar-placeholder small">{{ friend.profile.display_name|slice:':1'|upper }}</div>{% endif %}
+            <div><strong>{{ friend.profile.display_name }}</strong><div class="text-soft small">@{{ friend.username }}</div></div>
+          </div>
+          <form method="post" action="{% url 'remove_friend' friend.id %}">{% csrf_token %}<button class="btn btn-sm btn-outline-light">Quitar</button></form>
+        </div>
+      </div>
+    {% empty %}<p class="text-soft">Aún no tienes amigos.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}

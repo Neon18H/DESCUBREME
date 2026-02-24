@@ -3,23 +3,52 @@ import string
 import uuid
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.text import slugify
 
 
 class UserProfile(models.Model):
+    VIBE_CHOICES = [
+        ('chill', 'Chill'),
+        ('foodie', 'Foodie'),
+        ('cultural', 'Cultural'),
+        ('adventure', 'Adventure'),
+        ('rumba_suave', 'Rumba suave'),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    username_slug = models.SlugField(unique=True, max_length=160)
     display_name = models.CharField(max_length=60)
+    username_slug = models.SlugField(unique=True, max_length=160)
     bio = models.TextField(blank=True)
     city_default = models.CharField(max_length=80, blank=True)
     city_slug = models.SlugField(max_length=90, blank=True)
+    website = models.URLField(blank=True)
+    instagram = models.CharField(max_length=120, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    cover = models.ImageField(upload_to='covers/', blank=True, null=True)
+
     likes_tags = models.JSONField(default=list, blank=True)
-    fears_tags = models.JSONField(default=list, blank=True)
+    avoid_tags = models.JSONField(default=list, blank=True)
+    budget_min_cop = models.IntegerField(null=True, blank=True)
+    budget_max_cop = models.IntegerField(null=True, blank=True)
+    max_distance_km = models.IntegerField(default=8)
+    preferred_vibes = models.JSONField(default=list, blank=True)
+
+    is_private = models.BooleanField(default=False)
+    show_city = models.BooleanField(default=True)
+    show_tags = models.BooleanField(default=True)
+    allow_friend_requests = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        if self.budget_min_cop and self.budget_max_cop and self.budget_min_cop > self.budget_max_cop:
+            raise ValidationError('El presupuesto mínimo no puede ser mayor que el máximo.')
 
     def save(self, *args, **kwargs):
         if not self.username_slug:
@@ -32,6 +61,58 @@ class UserProfile(models.Model):
 
     def __str__(self):
         return self.display_name
+
+
+class FriendRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pendiente'
+        ACCEPTED = 'accepted', 'Aceptada'
+        REJECTED = 'rejected', 'Rechazada'
+        CANCELED = 'canceled', 'Cancelada'
+
+    from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
+    to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['from_user', 'to_user'],
+                condition=Q(status='pending'),
+                name='uniq_pending_request',
+            ),
+        ]
+
+    def clean(self):
+        if self.from_user_id == self.to_user_id:
+            raise ValidationError('No puedes enviarte una solicitud a ti mismo.')
+
+
+class Friendship(models.Model):
+    user1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships_initiated')
+    user2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='friendships_received')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(fields=['user1', 'user2'], name='unique_friend_pair'),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self.user1_id and self.user2_id and self.user1_id > self.user2_id:
+            self.user1_id, self.user2_id = self.user2_id, self.user1_id
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def are_friends(cls, user_a, user_b):
+        if not user_a or not user_b or user_a == user_b:
+            return False
+        user1, user2 = sorted([user_a.id, user_b.id])
+        return cls.objects.filter(user1_id=user1, user2_id=user2).exists()
 
 
 class Plan(models.Model):

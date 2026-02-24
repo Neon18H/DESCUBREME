@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Solicitudes{% endblock %}
+{% block content %}
+<section class="container py-4">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="glass-card p-3 h-100">
+        <h2 class="h5">Recibidas</h2>
+        {% for req in received %}
+          <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <span>{{ req.from_user.profile.display_name }}</span>
+            <div class="d-flex gap-1">
+              <form method="post" action="{% url 'accept_friend_request' req.id %}">{% csrf_token %}<button class="btn btn-sm app-btn app-btn-primary">Aceptar</button></form>
+              <form method="post" action="{% url 'reject_friend_request' req.id %}">{% csrf_token %}<button class="btn btn-sm btn-outline-light">Rechazar</button></form>
+            </div>
+          </div>
+        {% empty %}<p class="text-soft">No tienes solicitudes recibidas.</p>{% endfor %}
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="glass-card p-3 h-100">
+        <h2 class="h5">Enviadas</h2>
+        {% for req in sent %}<div class="border-bottom py-2">{{ req.to_user.profile.display_name }} <span class="text-soft">(pendiente)</span></div>{% empty %}<p class="text-soft">No tienes solicitudes enviadas.</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

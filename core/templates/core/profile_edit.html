@@ -1,13 +1,67 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}Editar perfil{% endblock %}
 {% block content %}
-<section class="container pt-4">
-  <div class="glass-card p-4 mx-auto" style="max-width:720px;">
-    <h1 class="h4 mb-3">Editar perfil</h1>
-    <form method="post">{% csrf_token %}
-      {{ form.as_p }}
-      <button class="btn app-btn app-btn-primary">Guardar cambios</button>
+<section class="container py-4">
+  <div class="glass-card p-4 mx-auto" style="max-width:900px;">
+    <h1 class="h4 mb-3">Tu perfil social</h1>
+    <form method="post" enctype="multipart/form-data">{% csrf_token %}
+      <ul class="nav nav-tabs mb-3" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-perfil" type="button">Perfil</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-personal" type="button">Personalización</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-preferencias" type="button">Preferencias</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-privacidad" type="button">Privacidad</button></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tab-perfil">
+          <div class="row g-3">
+            <div class="col-md-6">{{ form.display_name.label_tag }}{{ form.display_name }}</div>
+            <div class="col-md-6">{{ form.city_default.label_tag }}{{ form.city_default }}</div>
+            <div class="col-md-6">{{ form.website.label_tag }}{{ form.website }}</div>
+            <div class="col-md-6">{{ form.instagram.label_tag }}{{ form.instagram }}</div>
+            <div class="col-12">{{ form.bio.label_tag }}{{ form.bio }}</div>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="tab-personal">
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.avatar.label_tag }}{{ form.avatar }}
+              <img id="avatarPreview" class="img-fluid rounded mt-2 preview-media" src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% endif %}" alt="avatar">
+            </div>
+            <div class="col-md-6">
+              {{ form.cover.label_tag }}{{ form.cover }}
+              <img id="coverPreview" class="img-fluid rounded mt-2 preview-media" src="{% if user.profile.cover %}{{ user.profile.cover.url }}{% endif %}" alt="cover">
+            </div>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="tab-preferencias">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Gustos</label>
+              <div class="chips-box" data-target="id_likes_tags"><input type="text" placeholder="Escribe y Enter"></div>
+              {{ form.likes_tags }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Evitar</label>
+              <div class="chips-box" data-target="id_avoid_tags"><input type="text" placeholder="Escribe y Enter"></div>
+              {{ form.avoid_tags }}
+            </div>
+            <div class="col-md-4">{{ form.budget_min_cop.label_tag }}{{ form.budget_min_cop }}</div>
+            <div class="col-md-4">{{ form.budget_max_cop.label_tag }}{{ form.budget_max_cop }}</div>
+            <div class="col-md-4">{{ form.max_distance_km.label_tag }}{{ form.max_distance_km }}</div>
+            <div class="col-12">{{ form.preferred_vibes.label_tag }}{{ form.preferred_vibes }}</div>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="tab-privacidad">
+          <div class="form-check mb-2">{{ form.is_private }} {{ form.is_private.label_tag }}</div>
+          <div class="form-check mb-2">{{ form.show_city }} {{ form.show_city.label_tag }}</div>
+          <div class="form-check mb-2">{{ form.show_tags }} {{ form.show_tags.label_tag }}</div>
+          <div class="form-check mb-2">{{ form.allow_friend_requests }} {{ form.allow_friend_requests.label_tag }}</div>
+        </div>
+      </div>
+      <button class="btn app-btn app-btn-primary mt-4">Guardar cambios</button>
     </form>
   </div>
 </section>
+<script src="{% static 'js/profile.js' %}"></script>
 {% endblock %}
