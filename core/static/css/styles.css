@@ -164,3 +164,16 @@ h1, h2, h3, .hero-title, .auth-title, .app-brand span:last-child { font-family: 
 .chip-danger{background:rgba(255,77,109,.18);border-color:rgba(255,77,109,.4)}
 .nav-pills .nav-link{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.14)}
 .nav-pills .nav-link.active{background:linear-gradient(135deg,#6f7cff,#8b5cf6)}
+.profile-cover{height:180px;background:linear-gradient(120deg,#3846a5,#1f8eb3);background-size:cover;background-position:center}
+.profile-avatar{width:86px;height:86px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.45)}
+.profile-avatar-sm{width:46px;height:46px;border-radius:50%;object-fit:cover}
+.avatar-placeholder.small{width:46px;height:46px;font-size:1rem}
+.preview-media{max-height:200px;object-fit:cover;background:rgba(255,255,255,.05)}
+.chips-box{display:flex;flex-wrap:wrap;gap:.4rem;padding:.45rem;border:1px solid rgba(255,255,255,.2);border-radius:12px;background:rgba(0,0,0,.2)}
+.chips-box input{border:0;background:transparent;color:#fff;outline:none;min-width:120px}
+.chip-remove{margin-left:.4rem;border:0;background:transparent;color:#fff}
+.form-control,.form-select,textarea{background:var(--input-bg)!important;border:1px solid rgba(255,255,255,.14)!important;color:#fff!important}
+.form-control:focus,.form-select:focus,textarea:focus{box-shadow:0 0 0 .2rem var(--ring)!important}
+.nav-tabs{border-color:rgba(255,255,255,.15)}
+.nav-tabs .nav-link{color:#dce3f8;border-color:transparent}
+.nav-tabs .nav-link.active{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18);color:#fff}

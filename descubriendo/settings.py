@@ -113,6 +113,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.social_counts',
             ],
         },
     },
@@ -161,6 +162,9 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'core' / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY', '')
@@ -206,3 +210,5 @@ LOGGING = {
 LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/saved/'
 LOGOUT_REDIRECT_URL = '/'
+
+SILENCED_SYSTEM_CHECKS = ['fields.E210']
