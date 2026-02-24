@@ -37,7 +37,7 @@ def _extract_json(response_data: dict) -> dict:
     return json.loads(content)
 
 
-def parse_user_prompt(user_prompt: str) -> dict:
+def parse_user_prompt(user_prompt: str, city_name: str = '', lat: float | None = None, lng: float | None = None, user_preferences: dict | None = None) -> dict:
     if not settings.OPENROUTER_API_KEY:
         raise OpenRouterError('OPENROUTER_API_KEY no configurada.')
 
@@ -53,6 +53,14 @@ def parse_user_prompt(user_prompt: str) -> dict:
         ],
         'constraints': {'max_distance_km': 8, 'avoid': ['muy caro'], 'prioritize': ['rating>=4.4', 'popular']},
     }
+    enriched_prompt = user_prompt
+    if city_name:
+        enriched_prompt += f"\nCiudad inferida por GPS: {city_name}."
+    if lat is not None and lng is not None:
+        enriched_prompt += f"\nCoordenadas aproximadas: {lat:.6f}, {lng:.6f}."
+    if user_preferences:
+        enriched_prompt += f"\nPreferencias usuario: {json.dumps(user_preferences, ensure_ascii=False)}"
+
     messages = [
         {
             'role': 'system',
@@ -62,7 +70,7 @@ def parse_user_prompt(user_prompt: str) -> dict:
                 f'{json.dumps(schema_hint, ensure_ascii=False)}'
             ),
         },
-        {'role': 'user', 'content': user_prompt},
+        {'role': 'user', 'content': enriched_prompt},
     ]
 
     try:

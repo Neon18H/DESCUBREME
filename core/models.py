@@ -127,8 +127,10 @@ class Plan(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='plans')
     title = models.CharField(max_length=120)
-    city = models.CharField(max_length=80)
-    city_slug = models.SlugField(max_length=90)
+    city = models.CharField(max_length=80, blank=True)
+    city_name = models.CharField(max_length=80, default='')
+    city_slug = models.SlugField(max_length=90, blank=True)
+    country_code = models.CharField(max_length=2, default='CO')
     mood = models.CharField(max_length=40, blank=True)
     group = models.CharField(max_length=40, blank=True)
     budget_cop = models.IntegerField(null=True, blank=True)
@@ -148,8 +150,12 @@ class Plan(models.Model):
         ordering = ['-created_at']
 
     def save(self, *args, **kwargs):
+        if self.city_name and not self.city:
+            self.city = self.city_name
+        if self.city and not self.city_name:
+            self.city_name = self.city
         if not self.city_slug:
-            self.city_slug = slugify(self.city)
+            self.city_slug = slugify(self.city_name or self.city)
         if not self.share_code:
             alphabet = string.ascii_letters + string.digits
             self.share_code = ''.join(secrets.choice(alphabet) for _ in range(12))

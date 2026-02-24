@@ -6,6 +6,6 @@
   <p>{{ owner_profile.city }}</p>
   {% if friendship.state == 'friends' and user != owner %}<a class="btn btn-primary btn-sm" href="{% url 'chat_thread' owner.username %}">Abrir chat</a>{% endif %}
   <h5 class="mt-3">Planes compartidos</h5>
-  {% for plan in plans %}<a href="{% url 'public_plan_detail' plan.id %}" class="d-block">{{ plan.title }}</a>{% empty %}<p>Sin planes.</p>{% endfor %}
+  {% for plan in plans %}<a href="{% url 'public_plan_detail' plan.id %}" class="d-block">{{ plan.title }} · {{ plan.city_name }}</a>{% empty %}<p>Sin planes.</p>{% endfor %}
 </div>
 {% endblock %}
