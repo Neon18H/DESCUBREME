@@ -3,13 +3,17 @@ import json
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
+from django.db import transaction
+from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.utils.text import slugify
+from django.views.decorators.http import require_GET, require_POST
 
-from core.forms import RegisterForm
-from core.models import FavoritePlace, FavoritePlan
+from core.forms import RegisterForm, UserProfileForm
+from core.models import Plan, PlanItem, PlanLike, PlanSave
 from core.services.planner import PlanGenerationError, generate_plan_from_prompt
 
 
@@ -17,7 +21,7 @@ class AppLoginView(LoginView):
     template_name = 'core/login.html'
 
     def get_success_url(self):
-        return '/mis-planes/'
+        return '/my/plans/'
 
 
 class AppLogoutView(LogoutView):
@@ -30,7 +34,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('/mis-planes/')
+            return redirect('/my/plans/')
     else:
         form = RegisterForm()
     return render(request, 'core/register.html', {'form': form})
@@ -61,59 +65,132 @@ def api_generate_plan(request):
 
 @login_required
 @require_POST
-def api_save_place(request):
+def api_save_plan(request):
     try:
         payload = json.loads(request.body.decode('utf-8'))
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({'error': 'Payload inválido.'}, status=400)
 
     parsed = payload.get('parsed_request') or {}
-    place = payload.get('place') or {}
-    window = payload.get('window') or {}
+    windows = payload.get('time_windows') or []
+    city = parsed.get('city') or 'Ciudad'
 
-    if not place.get('place_id'):
-        return JsonResponse({'error': 'Lugar inválido.'}, status=400)
-
-    favorite_plan = FavoritePlan.objects.create(
-        user=request.user,
-        prompt=payload.get('prompt', ''),
-        city=parsed.get('city', ''),
-        country=parsed.get('country', ''),
+    plan = Plan.objects.create(
+        owner=request.user,
+        title=payload.get('title') or f"Plan en {city}",
+        city=city,
+        city_slug=slugify(city),
         mood=parsed.get('mood', ''),
         group=parsed.get('group', ''),
-        budget_cop=parsed.get('budget_cop') or 0,
-        source_payload=payload,
+        budget_cop=parsed.get('budget_cop'),
+        prompt_text=payload.get('prompt', ''),
+        plan_json=payload,
     )
 
-    FavoritePlace.objects.create(
-        favorite_plan=favorite_plan,
-        window_label=window.get('label', ''),
-        window_start=window.get('start', ''),
-        window_end=window.get('end', ''),
-        name=place.get('name', 'Lugar recomendado'),
-        place_id=place.get('place_id', ''),
-        rating=place.get('rating'),
-        user_ratings_total=place.get('user_ratings_total'),
-        price_level=place.get('price_level'),
-        estimated_cost_cop=place.get('estimated_cost_cop'),
-        address=place.get('address', ''),
-        photo_url=place.get('photo_url', ''),
-        maps_url=place.get('maps_url', ''),
-        raw_payload=place.get('raw_payload') or {},
-    )
+    items_to_create = []
+    for window in windows:
+        for idx, place in enumerate(window.get('places') or [], start=1):
+            items_to_create.append(
+                PlanItem(
+                    plan=plan,
+                    time_label=window.get('label', ''),
+                    order=idx,
+                    place_id=place.get('place_id', ''),
+                    name=place.get('name', 'Lugar recomendado'),
+                    rating=place.get('rating'),
+                    user_ratings_total=place.get('user_ratings_total'),
+                    price_level=place.get('price_level'),
+                    address=place.get('address', ''),
+                    photo_reference=place.get('photo_reference', ''),
+                    photo_url=place.get('photo_url', ''),
+                    maps_url=place.get('maps_url', ''),
+                )
+            )
+    PlanItem.objects.bulk_create(items_to_create)
+    return JsonResponse({'ok': True, 'plan_id': str(plan.id), 'detail_url': f'/p/{plan.share_code}/'})
 
-    return JsonResponse({'ok': True, 'message': 'Lugar guardado en tus planes.'})
+
+@require_GET
+def city_feed(request, city_slug):
+    plans = Plan.objects.filter(is_public=True, city_slug=city_slug).select_related('owner', 'owner__profile')
+    from django.core.paginator import Paginator
+
+    paginator = Paginator(plans, 9)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    city_name = plans.first().city if plans.exists() else city_slug.replace('-', ' ').title()
+    return render(request, 'core/city_feed.html', {'page_obj': page_obj, 'city_name': city_name, 'city_slug': city_slug})
+
+
+@require_GET
+def public_plan_detail(request, share_code):
+    plan = get_object_or_404(Plan.objects.select_related('owner', 'owner__profile').prefetch_related('items'), share_code=share_code, is_public=True)
+    grouped_items = {}
+    for item in plan.items.all():
+        grouped_items.setdefault(item.time_label, []).append(item)
+    liked = request.user.is_authenticated and PlanLike.objects.filter(user=request.user, plan=plan).exists()
+    saved = request.user.is_authenticated and PlanSave.objects.filter(user=request.user, plan=plan).exists()
+    return render(request, 'core/plan_detail.html', {'plan': plan, 'grouped_items': grouped_items, 'liked': liked, 'saved': saved})
+
+
+@login_required
+@require_POST
+def save_public_plan(request, share_code):
+    plan = get_object_or_404(Plan, share_code=share_code, is_public=True)
+    _, created = PlanSave.objects.get_or_create(user=request.user, plan=plan)
+    if created:
+        Plan.objects.filter(pk=plan.pk).update(saves_count=F('saves_count') + 1)
+    return redirect('my_plans')
+
+
+@login_required
+@require_POST
+def toggle_plan_public(request, plan_id):
+    plan = get_object_or_404(Plan, id=plan_id, owner=request.user)
+    plan.is_public = not plan.is_public
+    plan.save(update_fields=['is_public', 'updated_at'])
+    return JsonResponse({'ok': True, 'is_public': plan.is_public, 'share_url': f'/p/{plan.share_code}/'})
+
+
+@login_required
+@require_POST
+def toggle_plan_like(request, plan_id):
+    plan = get_object_or_404(Plan, id=plan_id, is_public=True)
+    with transaction.atomic():
+        like, created = PlanLike.objects.get_or_create(user=request.user, plan=plan)
+        if created:
+            Plan.objects.filter(pk=plan.pk).update(likes_count=F('likes_count') + 1)
+            liked = True
+        else:
+            like.delete()
+            Plan.objects.filter(pk=plan.pk).update(likes_count=F('likes_count') - 1)
+            liked = False
+    plan.refresh_from_db(fields=['likes_count'])
+    return JsonResponse({'ok': True, 'liked': liked, 'likes_count': plan.likes_count})
+
+
+@require_GET
+def public_profile(request, username):
+    owner = get_object_or_404(User.objects.select_related('profile'), username=username)
+    plans = Plan.objects.filter(owner=owner, is_public=True)
+    return render(request, 'core/profile.html', {'owner': owner, 'plans': plans})
+
+
+@login_required
+def profile_settings(request):
+    profile = request.user.profile
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Perfil actualizado.')
+            return redirect('profile_settings')
+    else:
+        form = UserProfileForm(instance=profile)
+    return render(request, 'core/profile_edit.html', {'form': form})
 
 
 @login_required
 def my_plans(request):
-    plans = FavoritePlan.objects.filter(user=request.user).prefetch_related('places')
-    return render(request, 'core/plans.html', {'plans': plans})
-
-
-@login_required
-def delete_favorite_plan(request, plan_id):
-    plan = get_object_or_404(FavoritePlan, id=plan_id, user=request.user)
-    plan.delete()
-    messages.info(request, 'Plan eliminado.')
-    return redirect('my_plans')
+    created_plans = Plan.objects.filter(owner=request.user).prefetch_related('items')
+    saved_plans = Plan.objects.filter(saves__user=request.user).exclude(owner=request.user).distinct()
+    return render(request, 'core/my_plans.html', {'created_plans': created_plans, 'saved_plans': saved_plans})

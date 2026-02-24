@@ -1,12 +1,39 @@
 {% extends 'base.html' %}
+{% block title %}{{ plan.title }}{% endblock %}
 {% block content %}
-<div class="container py-5">
-  <div class="glass-card p-4 mb-4"><h2>{{ plan.title }}</h2><p>{{ plan.city }} · {{ plan.mood }}</p></div>
-  {% for step in plan.steps.all %}
-  <div class="glass-card p-3 mb-2">
-    <strong>{{ step.block|title }}:</strong> {{ step.place_name }}
-    <p class="mb-0">{{ step.description }}</p>
+<section class="container pt-4">
+  <div class="glass-card p-3 mb-3">
+    <h1 class="h3">{{ plan.title }}</h1>
+    <p class="text-soft">{{ plan.city }} · {{ plan.owner.profile.display_name }}</p>
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn app-btn app-btn-secondary btn-sm js-like-plan" data-plan-id="{{ plan.id }}">
+        <i class="bi bi-heart{% if liked %}-fill{% endif %}"></i> <span class="js-like-count">{{ plan.likes_count }}</span>
+      </button>
+      <form method="post" action="{% url 'save_public_plan' share_code=plan.share_code %}">{% csrf_token %}
+        <button class="btn app-btn app-btn-primary btn-sm" {% if saved %}disabled{% endif %}>Guardar en mis planes</button>
+      </form>
+      <button class="btn app-btn app-btn-secondary btn-sm js-copy-link" data-link="{{ request.build_absolute_uri }}">Copiar enlace</button>
+    </div>
   </div>
+
+  {% for label, items in grouped_items.items %}
+    <div class="glass-card p-3 mb-3">
+      <h2 class="h5">{{ label }}</h2>
+      <div class="row g-3">
+        {% for item in items %}
+          <div class="col-12 col-md-6 col-xl-4">
+            <div class="place-card h-100">
+              <div class="place-image" style="background-image:url('{{ item.photo_url }}')"></div>
+              <div class="p-3">
+                <h3 class="h6">{{ item.name }}</h3>
+                <p class="small text-soft">⭐ {{ item.rating|default:'N/A' }} · {{ item.address }}</p>
+                <a href="{{ item.maps_url }}" target="_blank" class="btn btn-sm app-btn app-btn-secondary">Maps</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
   {% endfor %}
-</div>
+</section>
 {% endblock %}
