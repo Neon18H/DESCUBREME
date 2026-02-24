@@ -1,21 +1,23 @@
-from django.conf import settings
+import json
+
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, LogoutView
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from core.forms import PlanGeneratorForm, RegisterForm
-from core.models import Plan, PlanStep
-from core.services.planner import PlanGenerationError, create_plan
+from core.forms import RegisterForm
+from core.models import FavoritePlace, FavoritePlan
+from core.services.planner import PlanGenerationError, generate_plan_from_prompt
 
 
 class AppLoginView(LoginView):
     template_name = 'core/login.html'
 
     def get_success_url(self):
-        return '/saved/'
+        return '/mis-planes/'
 
 
 class AppLogoutView(LogoutView):
@@ -28,111 +30,90 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('/saved/')
+            return redirect('/mis-planes/')
     else:
         form = RegisterForm()
     return render(request, 'core/register.html', {'form': form})
 
 
 def landing(request):
-    return render(request, 'core/landing.html')
+    return render(request, 'core/home.html')
 
 
-def generate_plan_view(request):
-    if request.method == 'POST':
-        form = PlanGeneratorForm(request.POST)
-        if form.is_valid():
-            try:
-                raw_places, ai_plan = create_plan(form.cleaned_data)
-                plan = Plan.objects.create(
-                    user=request.user if request.user.is_authenticated else None,
-                    city=form.cleaned_data['city'],
-                    mood=form.cleaned_data['mood'],
-                    start_time=form.cleaned_data['start_time'],
-                    end_time=form.cleaned_data['end_time'],
-                    budget_cop=form.cleaned_data['budget'],
-                    group_size=form.cleaned_data['group_size'],
-                    transport=form.cleaned_data['transport'],
-                    interests=form.cleaned_data['interests'],
-                    raw_places=raw_places,
-                    ai_plan_json=ai_plan,
-                    title=ai_plan.get('title', 'Plan personalizado'),
-                    is_saved=False,
-                )
-                order_count = 1
-                for block in ai_plan.get('blocks', []):
-                    block_name = block.get('name', 'tarde')
-                    for step in block.get('steps', []):
-                        place = step.get('place', {})
-                        PlanStep.objects.create(
-                            plan=plan,
-                            block=block_name,
-                            order=order_count,
-                            place_name=place.get('name') or step.get('title', 'Sitio recomendado'),
-                            address=place.get('address', ''),
-                            rating=place.get('rating'),
-                            maps_url=place.get('maps_url', ''),
-                            est_time_minutes=step.get('estimated_time_minutes'),
-                            est_cost_cop=step.get('estimated_cost_cop'),
-                            why=step.get('why', ''),
-                            description=step.get('description', ''),
-                        )
-                        order_count += 1
-                return redirect('plan_results', plan_id=plan.id)
-            except PlanGenerationError as exc:
-                return render(
-                    request,
-                    'core/error.html',
-                    {
-                        'message': str(exc),
-                        'debug_data': exc.debug_payload if settings.DEBUG else None,
-                    },
-                    status=502,
-                )
-            except Exception:
-                return render(
-                    request,
-                    'core/error.html',
-                    {'message': 'No pudimos generar tu plan ahora. Intenta nuevamente.'},
-                    status=500,
-                )
-    else:
-        form = PlanGeneratorForm()
-    return render(request, 'core/generate.html', {'form': form})
+@require_POST
+def api_generate_plan(request):
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Payload inválido.'}, status=400)
 
+    user_prompt = (payload.get('prompt') or '').strip()
+    if len(user_prompt) < 8:
+        return JsonResponse({'error': 'Describe mejor tu plan (mínimo 8 caracteres).'}, status=400)
 
-def plan_results(request, plan_id):
-    plan = get_object_or_404(Plan, id=plan_id)
-    return render(request, 'core/results.html', {'plan': plan})
+    try:
+        result = generate_plan_from_prompt(user_prompt)
+    except PlanGenerationError as exc:
+        return JsonResponse({'error': str(exc)}, status=502)
+
+    return JsonResponse(result)
 
 
 @login_required
 @require_POST
-def save_plan(request, plan_id):
-    plan = get_object_or_404(Plan, id=plan_id)
-    plan.is_saved = True
-    plan.user = request.user
-    plan.save(update_fields=['is_saved', 'user'])
-    messages.success(request, 'Plan guardado con éxito.')
-    return redirect('saved_plans')
+def api_save_place(request):
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({'error': 'Payload inválido.'}, status=400)
+
+    parsed = payload.get('parsed_request') or {}
+    place = payload.get('place') or {}
+    window = payload.get('window') or {}
+
+    if not place.get('place_id'):
+        return JsonResponse({'error': 'Lugar inválido.'}, status=400)
+
+    favorite_plan = FavoritePlan.objects.create(
+        user=request.user,
+        prompt=payload.get('prompt', ''),
+        city=parsed.get('city', ''),
+        country=parsed.get('country', ''),
+        mood=parsed.get('mood', ''),
+        group=parsed.get('group', ''),
+        budget_cop=parsed.get('budget_cop') or 0,
+        source_payload=payload,
+    )
+
+    FavoritePlace.objects.create(
+        favorite_plan=favorite_plan,
+        window_label=window.get('label', ''),
+        window_start=window.get('start', ''),
+        window_end=window.get('end', ''),
+        name=place.get('name', 'Lugar recomendado'),
+        place_id=place.get('place_id', ''),
+        rating=place.get('rating'),
+        user_ratings_total=place.get('user_ratings_total'),
+        price_level=place.get('price_level'),
+        estimated_cost_cop=place.get('estimated_cost_cop'),
+        address=place.get('address', ''),
+        photo_url=place.get('photo_url', ''),
+        maps_url=place.get('maps_url', ''),
+        raw_payload=place.get('raw_payload') or {},
+    )
+
+    return JsonResponse({'ok': True, 'message': 'Lugar guardado en tus planes.'})
 
 
 @login_required
-def saved_plans(request):
-    plans = Plan.objects.filter(is_saved=True, user=request.user)
-    return render(request, 'core/saved_plans.html', {'plans': plans})
+def my_plans(request):
+    plans = FavoritePlan.objects.filter(user=request.user).prefetch_related('places')
+    return render(request, 'core/plans.html', {'plans': plans})
 
 
 @login_required
-def plan_detail(request, plan_id):
-    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
-    return render(request, 'core/plan_detail.html', {'plan': plan})
-
-
-@login_required
-@require_POST
-def delete_plan(request, plan_id):
-    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
+def delete_favorite_plan(request, plan_id):
+    plan = get_object_or_404(FavoritePlan, id=plan_id, user=request.user)
     plan.delete()
     messages.info(request, 'Plan eliminado.')
-    return redirect('saved_plans')
+    return redirect('my_plans')

@@ -42,3 +42,40 @@ class PlanStep(models.Model):
 
     class Meta:
         ordering = ['block', 'order']
+
+
+class FavoritePlan(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorite_plans')
+    prompt = models.TextField()
+    city = models.CharField(max_length=120)
+    country = models.CharField(max_length=8, blank=True)
+    mood = models.CharField(max_length=40)
+    group = models.CharField(max_length=80, blank=True)
+    budget_cop = models.PositiveIntegerField(default=0)
+    source_payload = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class FavoritePlace(models.Model):
+    favorite_plan = models.ForeignKey(FavoritePlan, on_delete=models.CASCADE, related_name='places')
+    window_label = models.CharField(max_length=50)
+    window_start = models.CharField(max_length=10, blank=True)
+    window_end = models.CharField(max_length=10, blank=True)
+    name = models.CharField(max_length=180)
+    place_id = models.CharField(max_length=200)
+    rating = models.FloatField(null=True, blank=True)
+    user_ratings_total = models.PositiveIntegerField(null=True, blank=True)
+    price_level = models.IntegerField(null=True, blank=True)
+    estimated_cost_cop = models.PositiveIntegerField(null=True, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    photo_url = models.URLField(blank=True)
+    maps_url = models.URLField(blank=True)
+    raw_payload = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['window_label', '-rating', 'name']
