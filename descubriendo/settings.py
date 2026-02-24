@@ -64,14 +64,19 @@ else:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.up.railway.app']
 
 csrf_from_env = parse_csv_env('CSRF_TRUSTED_ORIGINS')
+required_csrf_origins = ['https://descubreme-production.up.railway.app']
+public_url = os.getenv('PUBLIC_URL', '').strip().rstrip('/')
+if public_url:
+    required_csrf_origins.append(public_url)
+
 if csrf_from_env:
-    CSRF_TRUSTED_ORIGINS = csrf_from_env
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(csrf_from_env + required_csrf_origins))
 else:
     csrf_defaults = []
-    public_url = os.getenv('PUBLIC_URL', '').strip()
     if public_url:
-        csrf_defaults.append(public_url.rstrip('/'))
+        csrf_defaults.append(public_url)
     csrf_defaults.extend(build_csrf_origins(ALLOWED_HOSTS))
+    csrf_defaults.extend(required_csrf_origins)
     CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(csrf_defaults))
 
 INSTALLED_APPS = [

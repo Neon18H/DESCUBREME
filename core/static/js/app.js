@@ -17,6 +17,7 @@
       button.addEventListener('click', async () => {
         const response = await fetch(`/plan/${button.dataset.planId}/like`, {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'X-CSRFToken': getCookie('csrftoken') },
         });
         if (!response.ok) return;
@@ -37,6 +38,7 @@
       button.addEventListener('click', async () => {
         const response = await fetch(`/plan/${button.dataset.planId}/toggle-public`, {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'X-CSRFToken': getCookie('csrftoken') },
         });
         const data = await response.json();
@@ -80,6 +82,7 @@
     document.querySelector('.js-save-plan').addEventListener('click', async (event) => {
       const response = await fetch('/api/save-plan/', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
         body: JSON.stringify({
           ...payload,
@@ -115,6 +118,7 @@
     try {
       const response = await fetch('/api/generate-plan/', {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
         body: JSON.stringify({ prompt }),
       });
