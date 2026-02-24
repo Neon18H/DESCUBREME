@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Planes en {{ city_name }}{% endblock %}
+{% block content %}
+<section class="container pt-4">
+  <h1 class="h3 mb-4">Planes públicos en {{ city_name }}</h1>
+  <div class="row g-3">
+    {% for plan in page_obj %}
+      <div class="col-12 col-md-6 col-xl-4">
+        <article class="glass-card p-3 h-100">
+          <h2 class="h5">{{ plan.title }}</h2>
+          <p class="text-soft mb-1">{{ plan.city }} · por <a href="{% url 'public_profile' username=plan.owner.username %}">{{ plan.owner.profile.display_name }}</a></p>
+          <p class="text-soft mb-2"><i class="bi bi-heart"></i> {{ plan.likes_count }} · <i class="bi bi-bookmark"></i> {{ plan.saves_count }}</p>
+          <p class="small text-soft">{{ plan.created_at|date:'d M Y' }}</p>
+          <a href="{% url 'public_plan_detail' share_code=plan.share_code %}" class="btn app-btn app-btn-primary btn-sm">Ver plan</a>
+        </article>
+      </div>
+    {% empty %}
+      <p class="text-soft">Aún no hay planes públicos en esta ciudad.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

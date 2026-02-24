@@ -13,20 +13,19 @@
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg app-navbar sticky-top" aria-label="Navegación principal">
+  <nav class="navbar navbar-expand-lg app-navbar sticky-top">
     <div class="container py-2">
-      <a class="navbar-brand app-brand" href="{% url 'landing' %}">
-        <span class="brand-mark"><i class="bi bi-stars"></i></span>
-        <span>Descúbreme</span>
-      </a>
-      <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Mostrar menú">
+      <a class="navbar-brand app-brand" href="{% url 'landing' %}">Descúbreme</a>
+      <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
         <span><i class="bi bi-list text-white fs-4"></i></span>
       </button>
       <div class="collapse navbar-collapse" id="mainNavbar">
         <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2 text-center py-3 py-lg-0">
           <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'landing' %}">Inicio</a></li>
+          <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'city_feed' city_slug='medellin' %}">Ciudades</a></li>
           {% if user.is_authenticated %}
             <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'my_plans' %}">Mis planes</a></li>
+            <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'public_profile' username=user.username %}">Perfil</a></li>
             <li class="nav-item mt-2 mt-lg-0"><a class="btn btn-sm app-btn app-btn-secondary px-3" href="{% url 'logout' %}">Logout</a></li>
           {% else %}
             <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'login' %}">Login</a></li>
@@ -38,14 +37,9 @@
   </nav>
 
   <main class="pb-5">
-    {% if messages %}
-      <div class="toast-stack container mt-3">
-        {% for message in messages %}
-          <div class="app-alert fade-up" role="alert">{{ message }}</div>
-        {% endfor %}
-      </div>
-    {% endif %}
-
+    <div class="container pt-3">
+      {% for message in messages %}<div class="app-alert">{{ message }}</div>{% endfor %}
+    </div>
     {% block content %}{% endblock %}
   </main>
 

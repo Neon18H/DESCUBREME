@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}Perfil de {{ owner.username }}{% endblock %}
+{% block content %}
+<section class="container pt-4">
+  <div class="glass-card p-4 mb-4">
+    <div class="d-flex align-items-center gap-3 mb-2">
+      <div class="avatar-placeholder">{{ owner.profile.display_name|slice:':1'|upper }}</div>
+      <div>
+        <h1 class="h4 mb-0">{{ owner.profile.display_name }}</h1>
+        <p class="text-soft mb-0">@{{ owner.username }}</p>
+      </div>
+    </div>
+    <p>{{ owner.profile.bio }}</p>
+    <div>
+      {% for tag in owner.profile.likes_tags %}<span class="chip">{{ tag }}</span>{% endfor %}
+      {% for tag in owner.profile.fears_tags %}<span class="chip chip-danger">{{ tag }}</span>{% endfor %}
+    </div>
+  </div>
+  <div class="row g-3">
+    {% for plan in plans %}
+      <div class="col-12 col-md-4"><div class="glass-card p-3"><h2 class="h6">{{ plan.title }}</h2><a href="{% url 'public_plan_detail' share_code=plan.share_code %}">Ver</a></div></div>
+    {% empty %}<p class="text-soft">Sin planes públicos.</p>{% endfor %}
+  </div>
+</section>
+{% endblock %}
