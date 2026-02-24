@@ -10,6 +10,7 @@ from django.db.models import F
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.text import slugify
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from core.forms import RegisterForm, UserProfileForm
@@ -40,6 +41,7 @@ def register_view(request):
     return render(request, 'core/register.html', {'form': form})
 
 
+@ensure_csrf_cookie
 def landing(request):
     return render(request, 'core/home.html')
 
