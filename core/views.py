@@ -14,7 +14,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from core.forms import ProfileForm, RegisterForm
-from core.models import FriendRequest, Friendship, Plan, PlanItem, PlanLike, PlanSave
+from core.models import FriendRequest, Friendship, Plan, PlanItem, PlanLike, PlanSave, UserProfile
 from core.services.planner import PlanGenerationError, generate_plan_from_prompt
 
 
@@ -198,13 +198,23 @@ def toggle_plan_like(request, plan_id):
 
 @require_GET
 def public_profile(request, username):
-    owner = get_object_or_404(User.objects.select_related('profile'), username=username)
+    owner = get_object_or_404(User, username=username)
+    owner_profile, _ = UserProfile.objects.get_or_create(
+        user=owner,
+        defaults={'display_name': owner.get_full_name() or owner.username},
+    )
     relation = _friendship_status(request.user, owner)
     can_view_plans = True
-    if owner.profile.is_private and relation.get('state') not in {'self', 'friends'}:
+    if owner_profile.is_private and relation.get('state') not in {'self', 'friends'}:
         can_view_plans = False
     plans = Plan.objects.filter(owner=owner, is_public=True) if can_view_plans else Plan.objects.none()
-    context = {'owner': owner, 'plans': plans, 'friendship': relation, 'can_view_plans': can_view_plans}
+    context = {
+        'owner': owner,
+        'owner_profile': owner_profile,
+        'plans': plans,
+        'friendship': relation,
+        'can_view_plans': can_view_plans,
+    }
     return render(request, 'core/profile_detail.html', context)
 
 
