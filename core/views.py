@@ -229,7 +229,7 @@ def profile_edit(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Perfil actualizado.')
-            return redirect('public_profile', username=request.user.username)
+            return redirect('profile_edit')
     else:
         form = ProfileEditForm(instance=profile)
     return render(request, 'core/profile_edit.html', {'form': form})

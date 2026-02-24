@@ -4,6 +4,9 @@
 {% block content %}
 <section class="container py-4 py-lg-5">
   <form method="post" enctype="multipart/form-data" class="glass-card overflow-hidden">{% csrf_token %}
+    {% if form.errors %}
+      <div class="alert alert-danger m-3 mb-0">{{ form.errors }}</div>
+    {% endif %}
     <div class="profile-cover position-relative" id="coverPreview"
          {% if user.profile.cover %}style="background-image:url('{{ user.profile.cover.url }}')"{% endif %}>
       <div class="position-absolute top-0 start-0 w-100 h-100" style="background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.55));"></div>
@@ -81,7 +84,7 @@
       </div>
 
       <div class="mt-4 d-flex justify-content-end">
-        <button class="btn app-btn app-btn-primary px-4">Guardar cambios</button>
+        <button type="submit" class="btn app-btn app-btn-primary px-4">Guardar cambios</button>
       </div>
     </div>
   </form>
