@@ -2,66 +2,89 @@
 {% load static %}
 {% block title %}Editar perfil{% endblock %}
 {% block content %}
-<section class="container py-4">
-  <div class="glass-card p-4 mx-auto" style="max-width:900px;">
-    <h1 class="h4 mb-3">Tu perfil social</h1>
-    <form method="post" enctype="multipart/form-data">{% csrf_token %}
-      <ul class="nav nav-tabs mb-3" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-perfil" type="button">Perfil</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-personal" type="button">Personalización</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-preferencias" type="button">Preferencias</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-privacidad" type="button">Privacidad</button></li>
+<section class="container py-4 py-lg-5">
+  <form method="post" enctype="multipart/form-data" class="glass-card overflow-hidden">{% csrf_token %}
+    <div class="profile-cover position-relative" id="coverPreview"
+         {% if user.profile.cover %}style="background-image:url('{{ user.profile.cover.url }}')"{% endif %}>
+      <div class="position-absolute top-0 start-0 w-100 h-100" style="background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.55));"></div>
+      <div class="position-absolute bottom-0 start-0 w-100 p-3 p-md-4 d-flex flex-wrap gap-3 align-items-end">
+        <div class="bg-dark bg-opacity-50 rounded-circle p-1">
+          {% if user.profile.avatar %}
+            <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="profile-avatar" id="avatarPreview">
+          {% else %}
+            <div class="avatar-placeholder profile-avatar text-uppercase" id="avatarFallback">{{ user.username|slice:":2" }}</div>
+            <img src="" alt="Avatar" class="profile-avatar d-none" id="avatarPreview">
+          {% endif %}
+        </div>
+        <div>
+          <h1 class="h4 mb-1">Tu perfil social</h1>
+          <p class="text-soft mb-0">Actualiza cómo te ven tus futuros parches de plan.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-3 p-md-4">
+      <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-perfil" type="button">Perfil</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ubicacion" type="button">Ubicación</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gustos" type="button">Gustos</button></li>
+        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-privacidad" type="button">Privacidad</button></li>
       </ul>
+
       <div class="tab-content">
         <div class="tab-pane fade show active" id="tab-perfil">
           <div class="row g-3">
             <div class="col-md-6">{{ form.display_name.label_tag }}{{ form.display_name }}</div>
-            <div class="col-md-6">{{ form.city_default.label_tag }}{{ form.city_default }}</div>
+            <div class="col-md-6">{{ form.about.label_tag }}{{ form.about }}</div>
+            <div class="col-12">{{ form.bio.label_tag }}{{ form.bio }}</div>
             <div class="col-md-6">{{ form.website.label_tag }}{{ form.website }}</div>
             <div class="col-md-6">{{ form.instagram.label_tag }}{{ form.instagram }}</div>
-            <div class="col-12">{{ form.bio.label_tag }}{{ form.bio }}</div>
+            <div class="col-md-6">{{ form.avatar.label_tag }}{{ form.avatar }}</div>
+            <div class="col-md-6">{{ form.cover.label_tag }}{{ form.cover }}</div>
           </div>
         </div>
-        <div class="tab-pane fade" id="tab-personal">
+
+        <div class="tab-pane fade" id="tab-ubicacion">
           <div class="row g-3">
-            <div class="col-md-6">
-              {{ form.avatar.label_tag }}{{ form.avatar }}
-              <img id="avatarPreview" class="img-fluid rounded mt-2 preview-media" src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% endif %}" alt="avatar">
-            </div>
-            <div class="col-md-6">
-              {{ form.cover.label_tag }}{{ form.cover }}
-              <img id="coverPreview" class="img-fluid rounded mt-2 preview-media" src="{% if user.profile.cover %}{{ user.profile.cover.url }}{% endif %}" alt="cover">
-            </div>
+            <div class="col-md-6">{{ form.country.label_tag }}{{ form.country }}</div>
+            <div class="col-md-6">{{ form.city.label_tag }}{{ form.city }}</div>
           </div>
         </div>
-        <div class="tab-pane fade" id="tab-preferencias">
+
+        <div class="tab-pane fade" id="tab-gustos">
+          {{ form.likes_tags }}{{ form.hobbies_tags }}{{ form.avoid_tags }}
           <div class="row g-3">
-            <div class="col-md-6">
+            <div class="col-lg-4">
               <label class="form-label">Gustos</label>
-              <div class="chips-box" data-target="id_likes_tags"><input type="text" placeholder="Escribe y Enter"></div>
-              {{ form.likes_tags }}
+              <div class="chips-box" data-target="id_likes_tags" data-initial='{{ form.likes_tags.value|default:"[]"|escapejs }}'>
+                <input type="text" placeholder="Escribe y presiona Enter">
+              </div>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Evitar</label>
-              <div class="chips-box" data-target="id_avoid_tags"><input type="text" placeholder="Escribe y Enter"></div>
-              {{ form.avoid_tags }}
+            <div class="col-lg-4">
+              <label class="form-label">Pasatiempos</label>
+              <div class="chips-box" data-target="id_hobbies_tags" data-initial='{{ form.hobbies_tags.value|default:"[]"|escapejs }}'>
+                <input type="text" placeholder="Ej: senderismo, cine, gaming">
+              </div>
             </div>
-            <div class="col-md-4">{{ form.budget_min_cop.label_tag }}{{ form.budget_min_cop }}</div>
-            <div class="col-md-4">{{ form.budget_max_cop.label_tag }}{{ form.budget_max_cop }}</div>
-            <div class="col-md-4">{{ form.max_distance_km.label_tag }}{{ form.max_distance_km }}</div>
-            <div class="col-12">{{ form.preferred_vibes.label_tag }}{{ form.preferred_vibes }}</div>
+            <div class="col-lg-4">
+              <label class="form-label">Evitar / Temores</label>
+              <div class="chips-box" data-target="id_avoid_tags" data-initial='{{ form.avoid_tags.value|default:"[]"|escapejs }}'>
+                <input type="text" placeholder="Ej: multitudes, alturas...">
+              </div>
+            </div>
           </div>
         </div>
+
         <div class="tab-pane fade" id="tab-privacidad">
-          <div class="form-check mb-2">{{ form.is_private }} {{ form.is_private.label_tag }}</div>
-          <div class="form-check mb-2">{{ form.show_city }} {{ form.show_city.label_tag }}</div>
-          <div class="form-check mb-2">{{ form.show_tags }} {{ form.show_tags.label_tag }}</div>
-          <div class="form-check mb-2">{{ form.allow_friend_requests }} {{ form.allow_friend_requests.label_tag }}</div>
+          <p class="text-soft mb-0">Más controles de privacidad llegarán aquí pronto.</p>
         </div>
       </div>
-      <button class="btn app-btn app-btn-primary mt-4">Guardar cambios</button>
-    </form>
-  </div>
+
+      <div class="mt-4 d-flex justify-content-end">
+        <button class="btn app-btn app-btn-primary px-4">Guardar cambios</button>
+      </div>
+    </div>
+  </form>
 </section>
 <script src="{% static 'js/profile.js' %}"></script>
 {% endblock %}

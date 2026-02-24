@@ -21,15 +21,19 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     display_name = models.CharField(max_length=60)
     username_slug = models.SlugField(unique=True, max_length=160)
+    about = models.CharField(max_length=160, blank=True)
     bio = models.TextField(blank=True)
+    country = models.CharField(max_length=80, blank=True)
+    city = models.CharField(max_length=80, blank=True)
     city_default = models.CharField(max_length=80, blank=True)
     city_slug = models.SlugField(max_length=90, blank=True)
     website = models.URLField(blank=True)
-    instagram = models.CharField(max_length=120, blank=True)
+    instagram = models.CharField(max_length=60, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     cover = models.ImageField(upload_to='covers/', blank=True, null=True)
 
     likes_tags = models.JSONField(default=list, blank=True)
+    hobbies_tags = models.JSONField(default=list, blank=True)
     avoid_tags = models.JSONField(default=list, blank=True)
     budget_min_cop = models.IntegerField(null=True, blank=True)
     budget_max_cop = models.IntegerField(null=True, blank=True)
@@ -53,8 +57,9 @@ class UserProfile(models.Model):
             self.username_slug = slugify(self.user.username)
         if not self.display_name:
             self.display_name = self.user.get_full_name() or self.user.username
-        if self.city_default:
-            self.city_slug = slugify(self.city_default)
+        city_reference = self.city or self.city_default
+        if city_reference:
+            self.city_slug = slugify(city_reference)
         super().save(*args, **kwargs)
 
     def __str__(self):

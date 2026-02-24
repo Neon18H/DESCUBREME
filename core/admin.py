@@ -18,8 +18,8 @@ class PlanAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'display_name', 'city_default', 'is_private', 'allow_friend_requests', 'updated_at')
-    search_fields = ('user__username', 'display_name', 'city_default')
+    list_display = ('user', 'display_name', 'city', 'country', 'is_private', 'allow_friend_requests', 'updated_at')
+    search_fields = ('user__username', 'display_name', 'city', 'country', 'city_default')
 
 
 @admin.register(FriendRequest)
