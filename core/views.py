@@ -6,7 +6,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView, LogoutView
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Max, OuterRef, Q, Subquery
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -91,8 +91,17 @@ def friendship_state(viewer, owner):
 
 
 def _get_conversation(user_a, user_b):
-    convo, _ = Conversation.objects.get_or_create(user1=user_a, user2=user_b)
-    return convo
+    if user_a.id < user_b.id:
+        u1, u2 = user_a, user_b
+    else:
+        u1, u2 = user_b, user_a
+
+    try:
+        with transaction.atomic():
+            convo, _ = Conversation.objects.get_or_create(user1=u1, user2=u2)
+            return convo
+    except IntegrityError:
+        return Conversation.objects.get(user1=u1, user2=u2)
 
 
 def register_view(request):
