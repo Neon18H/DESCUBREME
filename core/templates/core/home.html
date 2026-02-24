@@ -1,25 +1,38 @@
 {% extends 'base.html' %}
-{% block title %}Descúbreme · Plan brutal{% endblock %}
+{% block title %}Descúbreme · Planes con vibe{% endblock %}
 {% block content %}
-<section class="hero-wrap py-5">
+<section class="hero-wrap pt-5">
   <div class="container">
-    <div class="text-center mb-4">
-      <p class="text-uppercase text-soft small mb-2">MVP</p>
-      <h1 class="display-5 fw-bold text-white">Describe qué quieres hacer hoy</h1>
-      <p class="text-soft">Una idea y te devolvemos un plan por franjas con lugares reales.</p>
-    </div>
-    <div class="chat-shell mx-auto p-3 p-md-4">
-      <div class="input-group input-group-lg">
-        <textarea id="chatPrompt" class="form-control chat-input" rows="2" placeholder="Ej: tarde chill con café y parque, y en la noche bar con música en vivo en Medellín"></textarea>
-        <button id="generatePlanBtn" class="btn btn-primary glow-btn px-4" type="button">Generar plan</button>
+    <div class="hero-content text-center fade-up">
+      <p class="micro-eyebrow mb-2">PLANEA SIN FRICCIÓN</p>
+      <h1 class="hero-title">Tu plan ideal, en segundos.</h1>
+      <p class="hero-subtitle mx-auto">Cuéntame tu mood y te devuelvo una ruta inteligente para tarde y noche, con lugares reales y presupuesto aterrizado.</p>
+      <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+        <span class="chip">Alegre</span>
+        <span class="chip">Chill</span>
+        <span class="chip">Romántico</span>
+        <span class="chip">Low cost</span>
       </div>
-      <small class="text-soft d-block mt-2">Tip: incluye ciudad, mood, grupo y presupuesto aproximado.</small>
+    </div>
+
+    <div class="chat-shell mx-auto p-3 p-md-4 mt-4 fade-up">
+      <label for="chatPrompt" class="form-label micro-label">Describe tu plan</label>
+      <div class="chat-input-wrap">
+        <textarea id="chatPrompt" class="form-control chat-input" rows="2" placeholder="Estoy alegre, quiero plan tarde chill y noche con amigos, presupuesto 120k…"></textarea>
+        <button id="generatePlanBtn" class="btn app-btn app-btn-primary chat-send-btn" type="button">
+          <i class="bi bi-magic me-1"></i>Generar plan
+        </button>
+      </div>
+      <small class="text-soft d-block mt-2">Enter para generar · Shift + Enter para salto de línea.</small>
       <p id="planError" class="text-danger mt-2 mb-0 d-none"></p>
     </div>
   </div>
 </section>
 
-<section class="pb-5">
-  <div class="container" id="resultsRoot"></div>
+<section class="pt-4">
+  <div class="container">
+    <div id="loadingState" class="d-none fade-up"></div>
+    <div id="resultsRoot" class="results-root"></div>
+  </div>
 </section>
 {% endblock %}
