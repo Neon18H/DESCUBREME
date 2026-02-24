@@ -17,7 +17,7 @@
             {% if person.profile.avatar %}<img src="{{ person.profile.avatar.url }}" class="profile-avatar-sm">{% else %}<div class="avatar-placeholder small">{{ person.profile.display_name|slice:':1'|upper }}</div>{% endif %}
             <div><strong>{{ person.profile.display_name }}</strong><div class="text-soft small">@{{ person.username }}</div></div>
           </div>
-          <p class="small text-soft">{{ person.profile.city_default|default:'Ciudad no definida' }}</p>
+          <p class="small text-soft">{{ person.profile.city|default:person.profile.city_default|default:'Ciudad no definida' }}</p>
           <div class="d-flex gap-2">
             <a class="btn btn-sm btn-outline-light" href="{% url 'public_profile' person.username %}">Ver perfil</a>
             <form method="post" action="{% url 'send_friend_request' person.id %}">{% csrf_token %}<button class="btn btn-sm app-btn app-btn-primary">Agregar</button></form>

@@ -13,7 +13,7 @@ urlpatterns = [
     path('plan/<uuid:plan_id>/like', views.toggle_plan_like, name='toggle_plan_like'),
 
     path('u/<str:username>/', views.public_profile, name='public_profile'),
-    path('settings/profile/', views.profile_settings, name='profile_settings'),
+    path('settings/profile/', views.profile_edit, name='profile_edit'),
 
     path('friends/search/', views.friends_search, name='friends_search'),
     path('friends/requests/', views.requests_list, name='requests_list'),

@@ -1,3 +1,5 @@
+import json
+
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
@@ -13,49 +15,79 @@ class RegisterForm(UserCreationForm):
         fields = ('username', 'email', 'password1', 'password2')
 
 
-class ProfileForm(forms.ModelForm):
-    likes_tags = forms.CharField(required=False)
-    avoid_tags = forms.CharField(required=False)
-    preferred_vibes = forms.MultipleChoiceField(
-        required=False,
-        choices=UserProfile.VIBE_CHOICES,
-        widget=forms.CheckboxSelectMultiple,
-    )
+class ProfileEditForm(forms.ModelForm):
+    likes_tags = forms.CharField(required=False, widget=forms.HiddenInput())
+    hobbies_tags = forms.CharField(required=False, widget=forms.HiddenInput())
+    avoid_tags = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = UserProfile
         fields = (
-            'display_name', 'bio', 'city_default', 'website', 'instagram',
-            'avatar', 'cover', 'likes_tags', 'avoid_tags', 'budget_min_cop',
-            'budget_max_cop', 'max_distance_km', 'preferred_vibes', 'is_private',
-            'show_city', 'show_tags', 'allow_friend_requests',
+            'display_name',
+            'about',
+            'bio',
+            'country',
+            'city',
+            'website',
+            'instagram',
+            'avatar',
+            'cover',
+            'likes_tags',
+            'hobbies_tags',
+            'avoid_tags',
         )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
-            self.fields['likes_tags'].initial = ', '.join(self.instance.likes_tags or [])
-            self.fields['avoid_tags'].initial = ', '.join(self.instance.avoid_tags or [])
-            self.fields['preferred_vibes'].initial = self.instance.preferred_vibes or []
+            self.fields['likes_tags'].initial = json.dumps(self.instance.likes_tags or [])
+            self.fields['hobbies_tags'].initial = json.dumps(self.instance.hobbies_tags or [])
+            self.fields['avoid_tags'].initial = json.dumps(self.instance.avoid_tags or [])
 
         for name, field in self.fields.items():
-            css = 'form-control'
-            if isinstance(field.widget, forms.CheckboxInput):
-                field.widget.attrs.update({'class': 'form-check-input'})
+            if isinstance(field.widget, forms.HiddenInput):
                 continue
-            if isinstance(field.widget, forms.CheckboxSelectMultiple):
-                field.widget.attrs.update({'class': 'vibes-checks'})
-                continue
-            if isinstance(field.widget, forms.FileInput):
-                css = 'form-control'
-            field.widget.attrs.update({'class': css})
+            field.widget.attrs.setdefault('class', 'form-control')
+
+        self.fields['bio'].widget = forms.Textarea(attrs={'class': 'form-control', 'rows': 4})
+        self.fields['about'].widget.attrs['maxlength'] = 160
 
     @staticmethod
-    def _parse_tags(raw_value):
-        return [tag.strip() for tag in (raw_value or '').split(',') if tag.strip()]
+    def _normalize_tags(raw_value):
+        if isinstance(raw_value, list):
+            values = raw_value
+        else:
+            parsed_values = []
+            text_value = (raw_value or '').strip()
+            if text_value:
+                try:
+                    json_value = json.loads(text_value)
+                    if isinstance(json_value, list):
+                        parsed_values = json_value
+                    elif isinstance(json_value, str):
+                        parsed_values = [chunk for chunk in json_value.split(',')]
+                except json.JSONDecodeError:
+                    parsed_values = [chunk for chunk in text_value.split(',')]
+            values = parsed_values
 
-    def clean_likes_tags(self):
-        return self._parse_tags(self.cleaned_data.get('likes_tags'))
+        cleaned = []
+        seen = set()
+        for value in values:
+            tag = str(value).strip()
+            if not tag:
+                continue
+            normalized = tag.lower()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            cleaned.append(tag[:24])
+            if len(cleaned) == 20:
+                break
+        return cleaned
 
-    def clean_avoid_tags(self):
-        return self._parse_tags(self.cleaned_data.get('avoid_tags'))
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data['likes_tags'] = self._normalize_tags(cleaned_data.get('likes_tags'))
+        cleaned_data['hobbies_tags'] = self._normalize_tags(cleaned_data.get('hobbies_tags'))
+        cleaned_data['avoid_tags'] = self._normalize_tags(cleaned_data.get('avoid_tags'))
+        return cleaned_data

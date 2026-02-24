@@ -13,7 +13,7 @@ from django.utils.text import slugify
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from core.forms import ProfileForm, RegisterForm
+from core.forms import ProfileEditForm, RegisterForm
 from core.models import FriendRequest, Friendship, Plan, PlanItem, PlanLike, PlanSave, UserProfile
 from core.services.planner import PlanGenerationError, generate_plan_from_prompt
 
@@ -219,16 +219,19 @@ def public_profile(request, username):
 
 
 @login_required
-def profile_settings(request):
-    profile = request.user.profile
+def profile_edit(request):
+    profile, _ = UserProfile.objects.get_or_create(
+        user=request.user,
+        defaults={'display_name': request.user.username},
+    )
     if request.method == 'POST':
-        form = ProfileForm(request.POST, request.FILES, instance=profile)
+        form = ProfileEditForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
             messages.success(request, 'Perfil actualizado.')
-            return redirect('profile_settings')
+            return redirect('public_profile', username=request.user.username)
     else:
-        form = ProfileForm(instance=profile)
+        form = ProfileEditForm(instance=profile)
     return render(request, 'core/profile_edit.html', {'form': form})
 
 
