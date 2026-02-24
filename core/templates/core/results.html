@@ -1,28 +1,27 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-5">
-  <h2>{{ plan.title }}</h2>
-  <p class="text-muted">{{ plan.city }} • Mood: {{ plan.mood }} • Presupuesto: ${{ plan.budget_cop }}</p>
-  <div class="timeline mt-4">
+  <div class="glass-card p-4 mb-4">
+    <h2>{{ plan.title }}</h2>
+    <p class="mb-0">{{ plan.city }} · mood {{ plan.mood }} · estimado COP {{ plan.ai_plan_json.total_estimated_cost_cop|default:0 }}</p>
+  </div>
+  <div class="timeline">
     {% for step in plan.steps.all %}
-      <div class="timeline-item glass-card p-3 mb-3">
-        <span class="badge bg-secondary">{{ step.block|title }}</span>
+      <article class="timeline-item glass-card p-3 mb-3">
+        <span class="badge bg-info">{{ step.block|title }}</span>
         <h5 class="mt-2">{{ step.place_name }}</h5>
-        <p class="mb-1">{{ step.description }}</p>
-        <p class="mb-1"><strong>Por qué:</strong> {{ step.why }}</p>
-        <p class="mb-1">⏱ {{ step.est_time_minutes }} min • 💸 ${{ step.est_cost_cop }}</p>
-        <p class="mb-1">📍 {{ step.address }} {% if step.rating %}• ⭐ {{ step.rating }}{% endif %}</p>
-        {% if step.maps_url %}<a href="{{ step.maps_url }}" target="_blank">Ver en Maps</a>{% endif %}
-      </div>
+        <p>{{ step.description }}</p>
+        <small>⏱ {{ step.est_time_minutes }} min · 💸 {{ step.est_cost_cop }} · ⭐ {{ step.rating|default:'N/A' }}</small>
+        <div>{% if step.maps_url %}<a href="{{ step.maps_url }}" target="_blank">Abrir Maps</a>{% endif %}</div>
+      </article>
     {% endfor %}
   </div>
-  <div class="d-flex gap-2 mt-3">
+  {% if user.is_authenticated %}
     {% if not plan.is_saved %}
-    <form method="post" action="{% url 'save_plan' plan.id %}">{% csrf_token %}<button class="btn btn-success">Guardar</button></form>
-    {% else %}
-    <button class="btn btn-secondary" disabled>Ya guardado</button>
+    <form method="post" action="{% url 'save_plan' plan.id %}">{% csrf_token %}<button class="btn btn-success">Guardar plan</button></form>
     {% endif %}
-    <a href="{% url 'generate_plan' %}" class="btn btn-outline-light">Generar otro plan</a>
-  </div>
+  {% else %}
+    <a class="btn btn-light" href="{% url 'login' %}?next={% url 'plan_results' plan.id %}">Inicia sesión para guardar</a>
+  {% endif %}
 </div>
 {% endblock %}

@@ -1,12 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-5">
-  <h2>{{ plan.title }}</h2>
-  <p>{{ plan.city }} - {{ plan.mood }}</p>
+  <div class="glass-card p-4 mb-4"><h2>{{ plan.title }}</h2><p>{{ plan.city }} · {{ plan.mood }}</p></div>
   {% for step in plan.steps.all %}
   <div class="glass-card p-3 mb-2">
-    <h6>{{ step.block|title }} - {{ step.place_name }}</h6>
-    <p>{{ step.description }}</p>
+    <strong>{{ step.block|title }}:</strong> {{ step.place_name }}
+    <p class="mb-0">{{ step.description }}</p>
   </div>
   {% endfor %}
 </div>

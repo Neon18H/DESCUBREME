@@ -1,10 +1,12 @@
 import uuid
 
+from django.contrib.auth.models import User
 from django.db import models
 
 
 class Plan(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='plans')
     city = models.CharField(max_length=120)
     mood = models.CharField(max_length=40)
     start_time = models.TimeField()
@@ -17,7 +19,7 @@ class Plan(models.Model):
     ai_plan_json = models.JSONField(default=dict)
     title = models.CharField(max_length=180)
     created_at = models.DateTimeField(auto_now_add=True)
-    is_saved = models.BooleanField(default=True)
+    is_saved = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['-created_at']

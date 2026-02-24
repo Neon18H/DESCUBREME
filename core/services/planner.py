@@ -1,61 +1,95 @@
-from core.services.google_places import place_details, text_search
+from collections import OrderedDict
+
+from core.services.google_places import GooglePlacesAPIError, place_details, text_search
 from core.services.openrouter_ai import generate_plan
 
-INTEREST_QUERIES = {
-    'comida': ['restaurante recomendado', 'helado artesanal'],
-    'rumba': ['discoteca', 'cervecería artesanal'],
-    'naturaleza': ['parque ecológico', 'mirador'],
+MOOD_QUERIES = {
+    'alegre': ['discoteca', 'rooftop', 'bar', 'parque de diversiones'],
+    'chill': ['café', 'cervecería artesanal', 'mirador', 'parque'],
     'cine': ['cine'],
-    'arte': ['museo de arte', 'galería'],
-    'café': ['café de especialidad'],
-    'compras': ['centro comercial', 'tienda local'],
-    'deporte': ['cancha deportiva', 'gimnasio'],
+    'comida': ['restaurante', 'hamburguesas', 'helado artesanal'],
 }
+
+INTEREST_QUERIES = {
+    'comida': ['restaurante', 'hamburguesas', 'helado artesanal'],
+    'rumba': ['discoteca', 'rooftop', 'bar'],
+    'naturaleza': ['mirador', 'parque'],
+    'cine': ['cine'],
+    'arte': ['museo', 'galería'],
+    'café': ['café', 'coffee roaster'],
+    'compras': ['centro comercial', 'mercado artesanal'],
+    'deporte': ['bowling', 'cancha deportiva'],
+}
+
+
+class PlanGenerationError(Exception):
+    def __init__(self, message: str, debug_payload: dict | None = None):
+        super().__init__(message)
+        self.debug_payload = debug_payload or {}
 
 
 def validate_ai_json(data: dict):
     if not isinstance(data, dict):
         raise ValueError('Respuesta AI inválida.')
-    for key in ['title', 'narrative', 'blocks']:
+    required = ['title', 'city', 'mood', 'blocks', 'total_estimated_cost_cop']
+    for key in required:
         if key not in data:
             raise ValueError(f'Falta campo obligatorio: {key}')
-    for block in ['tarde', 'noche']:
-        if block not in data['blocks'] or 'steps' not in data['blocks'][block]:
-            raise ValueError(f'Falta bloque {block}')
-        if not isinstance(data['blocks'][block]['steps'], list):
-            raise ValueError(f'Bloque {block} sin steps válidos')
-        for step in data['blocks'][block]['steps']:
-            required = ['title', 'description', 'why', 'estimated_time_minutes', 'estimated_cost_cop', 'place']
-            for field in required:
-                if field not in step:
-                    raise ValueError(f'Campo faltante en step: {field}')
+    if not isinstance(data['blocks'], list):
+        raise ValueError('El campo blocks debe ser una lista.')
 
 
-def build_places_payload(city: str, interests: list, limit_per_interest=10):
-    raw = {}
-    candidates = []
+def _collect_queries(mood: str, interests: list[str]) -> list[str]:
+    queries = []
+    queries.extend(MOOD_QUERIES.get(mood, []))
     for interest in interests:
-        queries = INTEREST_QUERIES.get(interest, [interest])
-        for query in queries:
-            results = text_search(query, city, limit=limit_per_interest)
-            raw[f'{interest}:{query}'] = results
-            for place in results[:5]:
-                details = place_details(place.get('place_id', '')) if place.get('place_id') else {}
-                item = {
+        queries.extend(INTEREST_QUERIES.get(interest, [interest]))
+    return list(OrderedDict.fromkeys(queries))
+
+
+def build_places_payload(city: str, mood: str, interests: list[str], limit_per_query: int = 7):
+    raw: dict = {'queries': []}
+    candidates = []
+    seen_ids: set[str] = set()
+    queries = _collect_queries(mood, interests)
+
+    for keyword in queries:
+        try:
+            results = text_search(keyword, city, limit=limit_per_query)
+            raw['queries'].append({'keyword': keyword, 'status': 'OK', 'results': results})
+        except GooglePlacesAPIError as exc:
+            raw['queries'].append({'keyword': keyword, 'status': 'ERROR', 'error': exc.payload or {'message': str(exc)}})
+            raise PlanGenerationError('Tuvimos un problema consultando Google Places.', debug_payload=raw)
+
+        for place in results:
+            place_id = place.get('place_id')
+            if not place_id or place_id in seen_ids:
+                continue
+            seen_ids.add(place_id)
+            details = place_details(place_id)
+            candidates.append(
+                {
+                    'place_id': place_id,
                     'name': details.get('name') or place.get('name'),
                     'address': details.get('formatted_address') or place.get('formatted_address', ''),
                     'rating': details.get('rating') or place.get('rating'),
-                    'maps_url': details.get('url'),
+                    'maps_url': details.get('url') or f"https://www.google.com/maps/place/?q=place_id:{place_id}",
                     'price_level': details.get('price_level'),
-                    'open_now': (details.get('opening_hours') or {}).get('open_now'),
                 }
-                if item['name']:
-                    candidates.append(item)
-    return raw, candidates[:30]
+            )
+
+    return raw, candidates[:40]
 
 
 def create_plan(form_data: dict):
-    raw_places, candidate_places = build_places_payload(form_data['city'], form_data['interests'])
+    raw_places, candidate_places = build_places_payload(
+        form_data['city'],
+        form_data['mood'],
+        form_data['interests'],
+    )
+    if not candidate_places:
+        raise PlanGenerationError('No encontramos suficientes lugares para crear tu plan.', debug_payload=raw_places)
+
     prompt_payload = {
         'context': {
             'city': form_data['city'],
@@ -69,11 +103,6 @@ def create_plan(form_data: dict):
             'radius_km': form_data['radius_km'],
         },
         'places': candidate_places,
-        'instructions': {
-            'blocks': ['tarde', 'noche'],
-            'steps_per_block': '2-3',
-            'include_maps_url': True,
-        },
     }
     ai_plan = generate_plan(prompt_payload)
     validate_ai_json(ai_plan)

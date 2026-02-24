@@ -1,7 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-5">
-  <div class="alert alert-danger">{{ message }}</div>
-  <a href="{% url 'generate_plan' %}" class="btn btn-primary">Volver</a>
+  <div class="glass-card p-4">
+    <h2>No pudimos generar el plan</h2>
+    <p>{{ message }}</p>
+    <a href="{% url 'generate_plan' %}" class="btn btn-warning">Intentar de nuevo</a>
+  </div>
+  {% if debug_data %}
+  <div class="glass-card p-4 mt-3">
+    <h5>Debug (solo DEBUG=True)</h5>
+    <pre class="mb-0">{{ debug_data|pprint }}</pre>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

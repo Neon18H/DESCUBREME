@@ -1,10 +1,37 @@
+from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView, LogoutView
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from core.forms import PlanGeneratorForm
+from core.forms import PlanGeneratorForm, RegisterForm
 from core.models import Plan, PlanStep
-from core.services.planner import create_plan
+from core.services.planner import PlanGenerationError, create_plan
+
+
+class AppLoginView(LoginView):
+    template_name = 'core/login.html'
+
+    def get_success_url(self):
+        return '/saved/'
+
+
+class AppLogoutView(LogoutView):
+    next_page = 'landing'
+
+
+def register_view(request):
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('/saved/')
+    else:
+        form = RegisterForm()
+    return render(request, 'core/register.html', {'form': form})
 
 
 def landing(request):
@@ -18,6 +45,7 @@ def generate_plan_view(request):
             try:
                 raw_places, ai_plan = create_plan(form.cleaned_data)
                 plan = Plan.objects.create(
+                    user=request.user if request.user.is_authenticated else None,
                     city=form.cleaned_data['city'],
                     mood=form.cleaned_data['mood'],
                     start_time=form.cleaned_data['start_time'],
@@ -32,12 +60,13 @@ def generate_plan_view(request):
                     is_saved=False,
                 )
                 order_count = 1
-                for block in ['tarde', 'noche']:
-                    for step in ai_plan['blocks'][block]['steps']:
+                for block in ai_plan.get('blocks', []):
+                    block_name = block.get('name', 'tarde')
+                    for step in block.get('steps', []):
                         place = step.get('place', {})
                         PlanStep.objects.create(
                             plan=plan,
-                            block=block,
+                            block=block_name,
                             order=order_count,
                             place_name=place.get('name') or step.get('title', 'Sitio recomendado'),
                             address=place.get('address', ''),
@@ -50,8 +79,23 @@ def generate_plan_view(request):
                         )
                         order_count += 1
                 return redirect('plan_results', plan_id=plan.id)
+            except PlanGenerationError as exc:
+                return render(
+                    request,
+                    'core/error.html',
+                    {
+                        'message': str(exc),
+                        'debug_data': exc.debug_payload if settings.DEBUG else None,
+                    },
+                    status=502,
+                )
             except Exception:
-                return render(request, 'core/error.html', {'message': 'No pudimos generar tu plan ahora. Intenta nuevamente.'})
+                return render(
+                    request,
+                    'core/error.html',
+                    {'message': 'No pudimos generar tu plan ahora. Intenta nuevamente.'},
+                    status=500,
+                )
     else:
         form = PlanGeneratorForm()
     return render(request, 'core/generate.html', {'form': form})
@@ -62,28 +106,33 @@ def plan_results(request, plan_id):
     return render(request, 'core/results.html', {'plan': plan})
 
 
+@login_required
 @require_POST
 def save_plan(request, plan_id):
     plan = get_object_or_404(Plan, id=plan_id)
     plan.is_saved = True
-    plan.save(update_fields=['is_saved'])
+    plan.user = request.user
+    plan.save(update_fields=['is_saved', 'user'])
     messages.success(request, 'Plan guardado con éxito.')
-    return redirect('plan_results', plan_id=plan.id)
+    return redirect('saved_plans')
 
 
+@login_required
 def saved_plans(request):
-    plans = Plan.objects.filter(is_saved=True)
+    plans = Plan.objects.filter(is_saved=True, user=request.user)
     return render(request, 'core/saved_plans.html', {'plans': plans})
 
 
+@login_required
 def plan_detail(request, plan_id):
-    plan = get_object_or_404(Plan, id=plan_id)
+    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
     return render(request, 'core/plan_detail.html', {'plan': plan})
 
 
+@login_required
 @require_POST
 def delete_plan(request, plan_id):
-    plan = get_object_or_404(Plan, id=plan_id)
+    plan = get_object_or_404(Plan, id=plan_id, user=request.user)
     plan.delete()
     messages.info(request, 'Plan eliminado.')
     return redirect('saved_plans')
