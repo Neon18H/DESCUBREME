@@ -16,6 +16,8 @@ class RegisterForm(UserCreationForm):
 
 
 class ProfileEditForm(forms.ModelForm):
+    avatar = forms.ImageField(required=False)
+    cover = forms.ImageField(required=False)
     likes_tags = forms.CharField(required=False, widget=forms.HiddenInput())
     hobbies_tags = forms.CharField(required=False, widget=forms.HiddenInput())
     avoid_tags = forms.CharField(required=False, widget=forms.HiddenInput())

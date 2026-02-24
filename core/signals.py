@@ -8,7 +8,10 @@ from core.models import UserProfile
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.get_or_create(
-            user=instance,
-            defaults={'display_name': instance.get_full_name() or instance.username},
-        )
+        UserProfile.objects.create(user=instance, display_name=instance.username)
+        return
+
+    UserProfile.objects.get_or_create(
+        user=instance,
+        defaults={'display_name': instance.username},
+    )

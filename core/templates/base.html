@@ -26,7 +26,7 @@
           {% if user.is_authenticated %}
             <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'my_plans' %}">Mis planes</a></li>
             <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'friends_list' %}">Amigos {% if pending_requests_count %}<span class="badge text-bg-danger">{{ pending_requests_count }}</span>{% endif %}</a></li>
-            <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'public_profile' username=user.username %}">Perfil</a></li>
+            <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'profile_edit' %}">Perfil</a></li>
             <li class="nav-item mt-2 mt-lg-0"><a class="btn btn-sm app-btn app-btn-secondary px-3" href="{% url 'logout' %}">Logout</a></li>
           {% else %}
             <li class="nav-item"><a class="nav-link app-nav-link" href="{% url 'login' %}">Login</a></li>

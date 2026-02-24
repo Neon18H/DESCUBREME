@@ -204,7 +204,7 @@ def public_profile(request, username):
     owner = get_object_or_404(User, username=username)
     owner_profile, _ = UserProfile.objects.get_or_create(
         user=owner,
-        defaults={'display_name': owner.get_full_name() or owner.username},
+        defaults={'display_name': owner.username},
     )
     relation = _friendship_status(request.user, owner)
     can_view_plans = True
@@ -238,7 +238,7 @@ def profile_edit(request):
             return redirect('profile_edit')
 
         messages.error(request, 'No se pudo guardar. Revisa los campos.')
-        logger.warning('ProfileEditForm errors: %s', form.errors.as_json())
+        logger.warning('Profile edit errors: %s', form.errors.as_json())
     else:
         form = ProfileEditForm(instance=profile)
 
