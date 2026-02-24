@@ -1,20 +1,19 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container py-5">
-  <h2>Planes guardados</h2>
-  <div class="row g-3 mt-2">
+  <h2 class="mb-4">Planes guardados</h2>
+  <div class="row g-3">
     {% for plan in plans %}
-    <div class="col-md-6">
-      <div class="glass-card p-3">
+    <div class="col-md-6 col-xl-4">
+      <div class="glass-card p-3 h-100 hover-lift">
         <h5>{{ plan.title }}</h5>
-        <p class="mb-1">{{ plan.city }} • {{ plan.mood }} • {{ plan.created_at|date:'d/m/Y H:i' }}</p>
-        <p class="mb-2">Costo estimado total: ${{ plan.steps.all|length }}</p>
-        <a class="btn btn-sm btn-primary" href="{% url 'plan_detail' plan.id %}">Ver detalle</a>
+        <p>{{ plan.city }} · {{ plan.created_at|date:'d/m/Y H:i' }}</p>
+        <a class="btn btn-sm btn-warning" href="{% url 'plan_detail' plan.id %}">Ver detalle</a>
         <form class="d-inline" method="post" action="{% url 'delete_plan' plan.id %}">{% csrf_token %}<button class="btn btn-sm btn-danger">Eliminar</button></form>
       </div>
     </div>
     {% empty %}
-    <p>No hay planes guardados.</p>
+    <p>No tienes planes guardados.</p>
     {% endfor %}
   </div>
 </div>

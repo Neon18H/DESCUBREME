@@ -1,25 +1,17 @@
 {% extends 'base.html' %}
 {% block content %}
-<section class="hero text-center text-white d-flex align-items-center">
-  <div class="container">
-    <h1 class="display-4 fw-bold">Descubre Medellín según tu mood</h1>
-    <p class="lead">Crea planes por bloques de tarde y noche con IA + lugares reales.</p>
-    <a href="{% url 'generate_plan' %}" class="btn btn-primary btn-lg animated-btn">Crear plan</a>
+<section class="hero d-flex align-items-center">
+  <div class="container text-center text-white">
+    <h1 class="display-3 fw-black">PLANEA UNA NOCHE ÉPICA</h1>
+    <p class="lead">Google Places + OpenRouter para armarte un plan real, moderno y con estilo.</p>
+    <a href="{% url 'generate_plan' %}" class="btn btn-warning btn-lg animated-btn">Generar plan</a>
   </div>
 </section>
-<section class="container py-5">
+<section class="container mt-n5">
   <div class="row g-4">
-    <div class="col-md-4"><div class="glass-card p-4"><h5>Mood</h5><p>Recomendaciones personalizadas según cómo te sientes.</p></div></div>
-    <div class="col-md-4"><div class="glass-card p-4"><h5>Plan por bloques</h5><p>Tarde y noche estructuradas con tiempos y costos.</p></div></div>
-    <div class="col-md-4"><div class="glass-card p-4"><h5>Recomendaciones cerca de ti</h5><p>Lugares reales usando Google Places.</p></div></div>
+    <div class="col-md-4"><div class="glass-card p-4 h-100"><h4>Resultados reales</h4><p>Lugares obtenidos desde Google Places.</p></div></div>
+    <div class="col-md-4"><div class="glass-card p-4 h-100"><h4>Plan con IA</h4><p>Bloques de tarde y noche con costos estimados.</p></div></div>
+    <div class="col-md-4"><div class="glass-card p-4 h-100"><h4>Guarda favoritos</h4><p>Inicia sesión y guarda tus rutas favoritas.</p></div></div>
   </div>
-</section>
-<section class="container pb-5">
-  <h3>¿Cómo funciona?</h3>
-  <ol>
-    <li>Completa tus preferencias.</li>
-    <li>Buscamos lugares relevantes en tu ciudad.</li>
-    <li>IA arma un plan narrativo paso a paso.</li>
-  </ol>
 </section>
 {% endblock %}

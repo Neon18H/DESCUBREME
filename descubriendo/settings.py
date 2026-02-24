@@ -153,15 +153,17 @@ SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', False)
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'core' / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 GOOGLE_PLACES_API_KEY = os.getenv('GOOGLE_PLACES_API_KEY', '')
 OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
-OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.1-8b-instruct:free')
+OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'google/gemma-2-9b-it:free')
 OPENROUTER_BASE_URL = os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1/chat/completions')
-APP_REFERER = os.getenv('APP_REFERER', 'http://localhost:8000')
+OPENROUTER_SITE_URL = os.getenv('OPENROUTER_SITE_URL', '')
+OPENROUTER_APP_NAME = os.getenv('OPENROUTER_APP_NAME', 'Descubriendo')
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 LOGGING = {
@@ -195,3 +197,7 @@ LOGGING = {
         },
     },
 }
+
+LOGIN_URL = '/auth/login/'
+LOGIN_REDIRECT_URL = '/saved/'
+LOGOUT_REDIRECT_URL = '/'
