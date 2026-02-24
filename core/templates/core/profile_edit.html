@@ -14,8 +14,15 @@
           {% endfor %}
 
           {% if form.errors %}
-            <div class="alert alert-danger m-3 mb-0">
-              <strong>Error:</strong> {{ form.errors }}
+            <div class="alert alert-danger m-3 mb-0" role="alert">
+              <strong>No se pudo guardar:</strong>
+              <ul class="mb-0 mt-2">
+                {% for field, errors in form.errors.items %}
+                  {% for error in errors %}
+                    <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
             </div>
           {% endif %}
 
