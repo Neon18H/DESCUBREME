@@ -18,7 +18,7 @@
   </div>
   <div class="row g-3">
     {% for plan in plans %}
-      <div class="col-12 col-md-4"><div class="glass-card p-3"><h2 class="h6">{{ plan.title }}</h2><a href="{% url 'public_plan_detail' share_code=plan.share_code %}">Ver</a></div></div>
+      <div class="col-12 col-md-4"><div class="glass-card p-3"><h2 class="h6">{{ plan.title }}</h2><a href="{% url 'public_plan_detail' plan.id %}">Ver</a></div></div>
     {% empty %}<p class="text-soft">Sin planes públicos.</p>{% endfor %}
   </div>
 </section>

@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2>{{ owner_profile.display_name }} (@{{ owner.username }})</h2>
+  <p>Perfil privado.</p>
+  {% if friendship.state == 'none' %}
+  <form method="post" action="{% url 'send_friend_request' owner.username %}">{% csrf_token %}<button class="btn btn-primary">Enviar solicitud</button></form>
+  {% elif friendship.state == 'pending_out' %}<span class="badge text-bg-warning">Solicitud enviada</span>
+  {% elif friendship.state == 'pending_in' %}
+  <form method="post" action="{% url 'accept_friend_request' friendship.request.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-success">Aceptar solicitud</button></form>
+  <form method="post" action="{% url 'reject_friend_request' friendship.request.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-outline-danger">Rechazar</button></form>
+  {% endif %}
+</div>
+{% endblock %}

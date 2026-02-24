@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2>Amigos</h2>
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <h5>Lista</h5>
+      {% for friend in friends %}
+      <div class="card bg-dark text-light mb-2"><div class="card-body d-flex justify-content-between"><span>@{{ friend.username }}</span><a class="btn btn-sm btn-outline-light" href="{% url 'chat_thread' friend.username %}">Chat</a></div></div>
+      {% empty %}<p>Sin amigos aún.</p>{% endfor %}
+    </div>
+    <div class="col-lg-6">
+      <h5>Solicitudes recibidas</h5>
+      {% for req in incoming %}
+      <div class="card bg-dark text-light mb-2"><div class="card-body">@{{ req.from_user.username }}
+      <form method="post" action="{% url 'accept_friend_request' req.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-success btn-sm">Aceptar</button></form>
+      <form method="post" action="{% url 'reject_friend_request' req.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-outline-danger btn-sm">Rechazar</button></form>
+      </div></div>
+      {% empty %}<p>Sin solicitudes.</p>{% endfor %}
+      <h5 class="mt-4">Solicitudes enviadas</h5>
+      {% for req in outgoing %}<div class="small text-secondary mb-2">@{{ req.to_user.username }} · pendiente</div>{% empty %}<p>No has enviado.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -6,6 +6,8 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
+from django.utils.html import strip_tags
 from django.utils.text import slugify
 
 
@@ -67,15 +69,15 @@ class UserProfile(models.Model):
 
 
 class FriendRequest(models.Model):
-    class Status(models.TextChoices):
+    class State(models.TextChoices):
         PENDING = 'pending', 'Pendiente'
         ACCEPTED = 'accepted', 'Aceptada'
         REJECTED = 'rejected', 'Rechazada'
-        CANCELED = 'canceled', 'Cancelada'
+        BLOCKED = 'blocked', 'Bloqueada'
 
     from_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_requests')
     to_user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_requests')
-    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    state = models.CharField(max_length=12, choices=State.choices, default=State.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -84,14 +86,17 @@ class FriendRequest(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['from_user', 'to_user'],
-                condition=Q(status='pending'),
-                name='uniq_pending_request',
+                name='uniq_request_pair',
             ),
         ]
 
     def clean(self):
         if self.from_user_id == self.to_user_id:
             raise ValidationError('No puedes enviarte una solicitud a ti mismo.')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class Friendship(models.Model):
@@ -130,6 +135,9 @@ class Plan(models.Model):
     prompt_text = models.TextField()
     plan_json = models.JSONField(default=dict)
     is_public = models.BooleanField(default=False)
+    is_shared = models.BooleanField(default=False)
+    shared_at = models.DateTimeField(null=True, blank=True)
+    cover_image = models.URLField(blank=True)
     share_code = models.CharField(max_length=12, unique=True, blank=True)
     likes_count = models.IntegerField(default=0)
     saves_count = models.IntegerField(default=0)
@@ -145,6 +153,10 @@ class Plan(models.Model):
         if not self.share_code:
             alphabet = string.ascii_letters + string.digits
             self.share_code = ''.join(secrets.choice(alphabet) for _ in range(12))
+        if self.is_shared and not self.shared_at:
+            self.shared_at = timezone.now()
+        if not self.is_shared:
+            self.shared_at = None
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -185,3 +197,71 @@ class PlanSave(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['user', 'plan'], name='unique_plan_save')]
+
+
+class PlanJoin(models.Model):
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='joins')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='joined_plans')
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-joined_at']
+        constraints = [models.UniqueConstraint(fields=['plan', 'user'], name='unique_plan_join')]
+
+
+class PlanComment(models.Model):
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='plan_comments')
+    body = models.TextField(max_length=1000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def clean(self):
+        cleaned = strip_tags((self.body or '').strip())
+        if not cleaned:
+            raise ValidationError('El comentario no puede estar vacío.')
+        self.body = cleaned[:1000]
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+
+class Conversation(models.Model):
+    user1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations_as_user1')
+    user2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations_as_user2')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        constraints = [models.UniqueConstraint(fields=['user1', 'user2'], name='unique_conversation_pair')]
+
+    def save(self, *args, **kwargs):
+        if self.user1_id and self.user2_id and self.user1_id > self.user2_id:
+            self.user1_id, self.user2_id = self.user2_id, self.user1_id
+        super().save(*args, **kwargs)
+
+
+class Message(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='messages_sent')
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [models.Index(fields=['conversation', 'created_at'])]
+
+    def clean(self):
+        cleaned = strip_tags((self.body or '').strip())
+        if not cleaned:
+            raise ValidationError('El mensaje no puede estar vacío.')
+        self.body = cleaned[:2000]
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)

@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+  <h2>Chats</h2>
+  {% for row in rows %}
+  <a href="{% url 'chat_thread' row.other.username %}" class="card bg-dark text-light mb-2 text-decoration-none"><div class="card-body d-flex justify-content-between"><div><strong>@{{ row.other.username }}</strong><div class="text-secondary small">{{ row.conversation.last_message|default:'Sin mensajes' }}</div></div>{% if row.unread %}<span class="badge text-bg-danger">{{ row.unread }}</span>{% endif %}</div></a>
+  {% empty %}<p>No tienes conversaciones.</p>{% endfor %}
+</div>
+{% endblock %}

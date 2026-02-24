@@ -3,6 +3,7 @@ import json
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.utils.html import strip_tags
 
 from core.models import UserProfile
 
@@ -95,3 +96,17 @@ class ProfileEditForm(forms.ModelForm):
 
     def clean_avoid_tags(self):
         return self._normalize_tags(self.cleaned_data.get('avoid_tags'))
+
+
+class MessageForm(forms.Form):
+    body = forms.CharField(max_length=2000, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Escribe un mensaje...'}))
+
+    def clean_body(self):
+        return strip_tags(self.cleaned_data['body']).strip()
+
+
+class CommentForm(forms.Form):
+    body = forms.CharField(max_length=1000, widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Comenta algo útil del plan...'}))
+
+    def clean_body(self):
+        return strip_tags(self.cleaned_data['body']).strip()

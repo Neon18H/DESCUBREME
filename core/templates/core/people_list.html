@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}People | Descúbreme{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <form class="mb-4">
+    <input name="q" value="{{ q }}" class="form-control form-control-lg" placeholder="Buscar por username, nombre o ciudad">
+  </form>
+  <div class="row g-3">
+    {% for card in cards %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card h-100 bg-dark text-light border-secondary">
+        <div class="card-body">
+          <h5>{{ card.profile.display_name }}</h5>
+          <p class="mb-1 text-secondary">@{{ card.user.username }}</p>
+          <p class="mb-3">{{ card.profile.city|default:'Sin ciudad' }}</p>
+          <a class="btn btn-outline-light btn-sm" href="{% url 'public_profile' card.user.username %}">Ver perfil</a>
+          {% if card.friendship.state == 'none' %}
+          <form method="post" action="{% url 'send_friend_request' card.user.username %}" class="d-inline">{% csrf_token %}<button class="btn btn-primary btn-sm">Enviar solicitud</button></form>
+          {% elif card.friendship.state == 'pending_out' %}<span class="badge text-bg-warning">Solicitud enviada</span>
+          {% elif card.friendship.state == 'pending_in' %}<span class="badge text-bg-info">Te envió solicitud</span>
+          {% elif card.friendship.state == 'friends' %}<span class="badge text-bg-success">Amigos</span>{% endif %}
+        </div>
+      </div>
+    </div>
+    {% empty %}<p>No hay resultados.</p>{% endfor %}
+  </div>
+</div>
+{% endblock %}
