@@ -56,16 +56,22 @@ if not SECRET_KEY:
 
 allow_all_hosts = env_bool('ALLOW_ALL_HOSTS_IN_PROD', False)
 allowed_hosts_from_env = parse_csv_env('ALLOWED_HOSTS')
+public_url = os.getenv('PUBLIC_URL', '').strip().rstrip('/')
+public_host = ''
+if public_url:
+    public_host = (urlparse(public_url).hostname or '').strip()
 if allowed_hosts_from_env:
     ALLOWED_HOSTS = allowed_hosts_from_env
 elif allow_all_hosts:
     ALLOWED_HOSTS = ['*']
 else:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.up.railway.app']
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.up.railway.app', 'descubreme-production.up.railway.app']
+
+if public_host and public_host not in ALLOWED_HOSTS and '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(public_host)
 
 csrf_from_env = parse_csv_env('CSRF_TRUSTED_ORIGINS')
 required_csrf_origins = ['https://descubreme-production.up.railway.app']
-public_url = os.getenv('PUBLIC_URL', '').strip().rstrip('/')
 if public_url:
     required_csrf_origins.append(public_url)
 

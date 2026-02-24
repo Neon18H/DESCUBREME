@@ -85,9 +85,11 @@ class ProfileEditForm(forms.ModelForm):
                 break
         return cleaned
 
-    def clean(self):
-        cleaned_data = super().clean()
-        cleaned_data['likes_tags'] = self._normalize_tags(cleaned_data.get('likes_tags'))
-        cleaned_data['hobbies_tags'] = self._normalize_tags(cleaned_data.get('hobbies_tags'))
-        cleaned_data['avoid_tags'] = self._normalize_tags(cleaned_data.get('avoid_tags'))
-        return cleaned_data
+    def clean_likes_tags(self):
+        return self._normalize_tags(self.cleaned_data.get('likes_tags'))
+
+    def clean_hobbies_tags(self):
+        return self._normalize_tags(self.cleaned_data.get('hobbies_tags'))
+
+    def clean_avoid_tags(self):
+        return self._normalize_tags(self.cleaned_data.get('avoid_tags'))
