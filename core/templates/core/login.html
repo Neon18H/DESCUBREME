@@ -1,14 +1,64 @@
 {% extends 'base.html' %}
-{% block title %}Login{% endblock %}
+{% block title %}Login · Descúbreme{% endblock %}
 {% block content %}
-<div class="container py-5">
-  <div class="auth-card mx-auto p-4">
-    <h2 class="h4 text-white mb-3">Bienvenido de vuelta</h2>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.as_p }}
-      <button class="btn btn-primary glow-btn w-100" type="submit">Entrar</button>
-    </form>
+<section class="container auth-page py-4 py-md-5">
+  <div class="row g-4 g-xl-5 align-items-stretch">
+    <div class="col-12 col-lg-6 fade-up">
+      <div class="auth-branding h-100">
+        <p class="micro-eyebrow mb-2">BIENVENIDO</p>
+        <h1 class="auth-title">Vuelve y arma el próximo planazo.</h1>
+        <p class="text-soft">Descúbreme mezcla mood, presupuesto y contexto para sugerirte salidas realmente útiles.</p>
+        <ul class="auth-bullets mt-4">
+          <li><i class="bi bi-check2-circle"></i>Planes por franjas (tarde / noche).</li>
+          <li><i class="bi bi-check2-circle"></i>Lugares reales con links directos.</li>
+          <li><i class="bi bi-check2-circle"></i>Guarda tus favoritos y compártelos.</li>
+        </ul>
+        <div class="mini-brand-card mt-4">
+          <p class="mb-1">"Menos scroll, más salir."</p>
+          <small class="text-soft">Tu copiloto para planes en la ciudad.</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-6 fade-up">
+      <div class="glass-card auth-form-card p-4 p-md-5">
+        <h2 class="h4 mb-4">Entrar</h2>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_username" class="form-label micro-label">Usuario</label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-person"></i>
+              <input type="text" name="username" id="id_username" class="form-control app-input{% if form.username.errors %} is-invalid{% endif %}" required>
+            </div>
+            {% if form.username.errors %}<div class="invalid-feedback d-block">{{ form.username.errors|join:', ' }}</div>{% endif %}
+          </div>
+          <div class="mb-2">
+            <label for="id_password" class="form-label micro-label">Contraseña</label>
+            <div class="input-icon-wrap">
+              <i class="bi bi-lock"></i>
+              <input type="password" name="password" id="id_password" class="form-control app-input has-toggle{% if form.password.errors %} is-invalid{% endif %}" required>
+              <button class="password-toggle" type="button" data-target="id_password" aria-label="Mostrar contraseña"><i class="bi bi-eye"></i></button>
+            </div>
+            {% if form.password.errors %}<div class="invalid-feedback d-block">{{ form.password.errors|join:', ' }}</div>{% endif %}
+          </div>
+
+          {% if form.non_field_errors %}
+            <div class="invalid-feedback d-block mb-3">{{ form.non_field_errors|join:', ' }}</div>
+          {% endif %}
+
+          <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
+            <a href="#" class="auth-link">¿Olvidaste tu contraseña?</a>
+            <a href="{% url 'register' %}" class="auth-link">¿No tienes cuenta? Regístrate</a>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button class="btn app-btn app-btn-primary" type="submit">Entrar</button>
+            <a href="{% url 'landing' %}" class="btn app-btn app-btn-secondary">Volver</a>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
-</div>
+</section>
 {% endblock %}
