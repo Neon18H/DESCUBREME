@@ -5,7 +5,7 @@ import uuid
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 from django.utils.html import strip_tags
 from django.utils.text import slugify
@@ -243,12 +243,13 @@ class Conversation(models.Model):
 
     class Meta:
         ordering = ['-updated_at']
-        constraints = [models.UniqueConstraint(fields=['user1', 'user2'], name='unique_conversation_pair')]
-
-    def save(self, *args, **kwargs):
-        if self.user1_id and self.user2_id and self.user1_id > self.user2_id:
-            self.user1_id, self.user2_id = self.user2_id, self.user1_id
-        super().save(*args, **kwargs)
+        constraints = [
+            models.CheckConstraint(
+                check=Q(user1__lt=F('user2')),
+                name='conversation_user1_lt_user2',
+            ),
+            models.UniqueConstraint(fields=['user1', 'user2'], name='unique_conversation_pair'),
+        ]
 
 
 class Message(models.Model):
