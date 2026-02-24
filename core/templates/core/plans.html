@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Mis planes{% endblock %}
+{% block content %}
+<div class="container py-5">
+  <h2 class="text-white mb-4">Mis planes guardados</h2>
+  <div class="row g-3">
+    {% for plan in plans %}
+      <div class="col-12 col-lg-6">
+        <article class="glass-card p-3 h-100 fade-up">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="text-soft mb-1">{{ plan.city }}, {{ plan.country }} · {{ plan.created_at|date:'d/m/Y H:i' }}</p>
+              <h3 class="h5 text-white mb-0">{{ plan.mood|title }} con {{ plan.group }}</h3>
+            </div>
+            <a class="btn btn-sm btn-outline-danger" href="{% url 'delete_favorite_plan' plan.id %}">Eliminar</a>
+          </div>
+          <p class="text-soft mt-2">"{{ plan.prompt }}"</p>
+          <div class="row g-2 mt-1">
+            {% for place in plan.places.all %}
+              <div class="col-12">
+                <div class="mini-place d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{{ place.window_label }} · {{ place.name }}</strong><br>
+                    <small class="text-soft">⭐ {{ place.rating|default:'N/A' }} · {{ place.user_ratings_total|default:0 }} reseñas</small>
+                  </div>
+                  {% if place.maps_url %}<a href="{{ place.maps_url }}" target="_blank" class="btn btn-sm btn-light">Maps</a>{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </article>
+      </div>
+    {% empty %}
+      <p class="text-soft">Aún no has guardado lugares.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
