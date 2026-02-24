@@ -54,7 +54,7 @@
           <div class="glass-card p-3 h-100">
             <h3 class="h6">{{ plan.title }}</h3>
             <p class="text-soft small mb-2">{{ plan.city }}</p>
-            <a class="btn btn-sm btn-outline-light" href="{% url 'public_plan_detail' plan.share_code %}">Ver plan</a>
+            <a class="btn btn-sm btn-outline-light" href="{% url 'public_plan_detail' plan.id %}">Ver plan</a>
           </div>
         </div>
       {% empty %}<p class="text-soft">Sin planes públicos.</p>{% endfor %}
