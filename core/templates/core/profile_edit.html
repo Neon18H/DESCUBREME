@@ -3,91 +3,106 @@
 {% block title %}Editar perfil{% endblock %}
 {% block content %}
 <section class="container py-4 py-lg-5">
-  <form method="post" enctype="multipart/form-data" class="glass-card overflow-hidden">{% csrf_token %}
-    {% if form.errors %}
-      <div class="alert alert-danger m-3 mb-0">{{ form.errors }}</div>
-    {% endif %}
-    <div class="profile-cover position-relative" id="coverPreview"
-         {% if user.profile.cover %}style="background-image:url('{{ user.profile.cover.url }}')"{% endif %}>
-      <div class="position-absolute top-0 start-0 w-100 h-100" style="background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.55));"></div>
-      <div class="position-absolute bottom-0 start-0 w-100 p-3 p-md-4 d-flex flex-wrap gap-3 align-items-end">
-        <div class="bg-dark bg-opacity-50 rounded-circle p-1">
-          {% if user.profile.avatar %}
-            <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="profile-avatar" id="avatarPreview">
-          {% else %}
-            <div class="avatar-placeholder profile-avatar text-uppercase" id="avatarFallback">{{ user.username|slice:":2" }}</div>
-            <img src="" alt="Avatar" class="profile-avatar d-none" id="avatarPreview">
+  <div class="mx-auto" style="max-width: 980px;">
+    <div class="rounded-4 p-1" style="background: linear-gradient(135deg, rgba(13,110,253,.25), rgba(111,66,193,.25), rgba(32,201,151,.2));">
+      <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} m-3 mb-0" role="alert">{{ message }}</div>
+          {% endfor %}
+
+          {% if form.errors %}
+            <div class="alert alert-danger m-3 mb-0">
+              <strong>Error:</strong> {{ form.errors }}
+            </div>
           {% endif %}
-        </div>
-        <div>
-          <h1 class="h4 mb-1">Tu perfil social</h1>
-          <p class="text-soft mb-0">Actualiza cómo te ven tus futuros parches de plan.</p>
-        </div>
+
+          <div class="profile-cover position-relative" id="coverPreview" {% if profile.cover %}style="background-image:url('{{ profile.cover.url }}')"{% endif %}>
+            <div class="position-absolute top-0 start-0 w-100 h-100" style="background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.6));"></div>
+            <div class="position-absolute bottom-0 start-0 w-100 p-3 p-md-4 d-flex align-items-end gap-3">
+              <div class="bg-dark bg-opacity-50 rounded-circle p-1">
+                {% if profile.avatar %}
+                  <img src="{{ profile.avatar.url }}" alt="Avatar" class="profile-avatar" id="avatarPreview">
+                {% else %}
+                  <div class="avatar-placeholder profile-avatar text-uppercase" id="avatarFallback">{{ request.user.username|slice:":2" }}</div>
+                  <img src="" alt="Avatar" class="profile-avatar d-none" id="avatarPreview">
+                {% endif %}
+              </div>
+              <div class="text-white">
+                <h1 class="h4 mb-1">Editar perfil</h1>
+                <p class="mb-0 text-white-50">Actualiza tus datos y guarda sin errores.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 p-md-4">
+            <ul class="nav nav-pills gap-2 mb-4" role="tablist">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-perfil" type="button">Perfil</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ubicacion" type="button">Ubicación</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gustos" type="button">Gustos</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-fotos" type="button">Fotos</button></li>
+            </ul>
+
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="tab-perfil">
+                <div class="row g-3">
+                  <div class="col-md-6">{{ form.display_name.label_tag }}{{ form.display_name }}</div>
+                  <div class="col-md-6">{{ form.about.label_tag }}{{ form.about }}</div>
+                  <div class="col-12">{{ form.bio.label_tag }}{{ form.bio }}</div>
+                  <div class="col-md-6">{{ form.website.label_tag }}{{ form.website }}</div>
+                  <div class="col-md-6">{{ form.instagram.label_tag }}{{ form.instagram }}</div>
+                </div>
+              </div>
+
+              <div class="tab-pane fade" id="tab-ubicacion">
+                <div class="row g-3">
+                  <div class="col-md-6">{{ form.country.label_tag }}{{ form.country }}</div>
+                  <div class="col-md-6">{{ form.city.label_tag }}{{ form.city }}</div>
+                </div>
+              </div>
+
+              <div class="tab-pane fade" id="tab-gustos">
+                {{ form.likes_tags }}{{ form.hobbies_tags }}{{ form.avoid_tags }}
+                <div class="row g-3">
+                  <div class="col-lg-4">
+                    <label class="form-label">Gustos</label>
+                    <div class="chips-box" data-target="id_likes_tags" data-initial='{{ form.likes_tags.value|default:"[]"|escapejs }}'>
+                      <input type="text" class="form-control" placeholder="Escribe y presiona Enter o coma">
+                    </div>
+                  </div>
+                  <div class="col-lg-4">
+                    <label class="form-label">Pasatiempos</label>
+                    <div class="chips-box" data-target="id_hobbies_tags" data-initial='{{ form.hobbies_tags.value|default:"[]"|escapejs }}'>
+                      <input type="text" class="form-control" placeholder="Ej: senderismo, cine">
+                    </div>
+                  </div>
+                  <div class="col-lg-4">
+                    <label class="form-label">Temores / Evitar</label>
+                    <div class="chips-box" data-target="id_avoid_tags" data-initial='{{ form.avoid_tags.value|default:"[]"|escapejs }}'>
+                      <input type="text" class="form-control" placeholder="Ej: alturas, multitudes">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tab-pane fade" id="tab-fotos">
+                <div class="row g-3">
+                  <div class="col-md-6">{{ form.avatar.label_tag }}{{ form.avatar }}</div>
+                  <div class="col-md-6">{{ form.cover.label_tag }}{{ form.cover }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+              <button type="submit" class="btn app-btn app-btn-primary px-4">Guardar cambios</button>
+            </div>
+          </div>
+        </form>
       </div>
     </div>
-
-    <div class="p-3 p-md-4">
-      <ul class="nav nav-tabs mb-4" role="tablist">
-        <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-perfil" type="button">Perfil</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ubicacion" type="button">Ubicación</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gustos" type="button">Gustos</button></li>
-        <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-privacidad" type="button">Privacidad</button></li>
-      </ul>
-
-      <div class="tab-content">
-        <div class="tab-pane fade show active" id="tab-perfil">
-          <div class="row g-3">
-            <div class="col-md-6">{{ form.display_name.label_tag }}{{ form.display_name }}</div>
-            <div class="col-md-6">{{ form.about.label_tag }}{{ form.about }}</div>
-            <div class="col-12">{{ form.bio.label_tag }}{{ form.bio }}</div>
-            <div class="col-md-6">{{ form.website.label_tag }}{{ form.website }}</div>
-            <div class="col-md-6">{{ form.instagram.label_tag }}{{ form.instagram }}</div>
-            <div class="col-md-6">{{ form.avatar.label_tag }}{{ form.avatar }}</div>
-            <div class="col-md-6">{{ form.cover.label_tag }}{{ form.cover }}</div>
-          </div>
-        </div>
-
-        <div class="tab-pane fade" id="tab-ubicacion">
-          <div class="row g-3">
-            <div class="col-md-6">{{ form.country.label_tag }}{{ form.country }}</div>
-            <div class="col-md-6">{{ form.city.label_tag }}{{ form.city }}</div>
-          </div>
-        </div>
-
-        <div class="tab-pane fade" id="tab-gustos">
-          {{ form.likes_tags }}{{ form.hobbies_tags }}{{ form.avoid_tags }}
-          <div class="row g-3">
-            <div class="col-lg-4">
-              <label class="form-label">Gustos</label>
-              <div class="chips-box" data-target="id_likes_tags" data-initial='{{ form.likes_tags.value|default:"[]"|escapejs }}'>
-                <input type="text" placeholder="Escribe y presiona Enter">
-              </div>
-            </div>
-            <div class="col-lg-4">
-              <label class="form-label">Pasatiempos</label>
-              <div class="chips-box" data-target="id_hobbies_tags" data-initial='{{ form.hobbies_tags.value|default:"[]"|escapejs }}'>
-                <input type="text" placeholder="Ej: senderismo, cine, gaming">
-              </div>
-            </div>
-            <div class="col-lg-4">
-              <label class="form-label">Evitar / Temores</label>
-              <div class="chips-box" data-target="id_avoid_tags" data-initial='{{ form.avoid_tags.value|default:"[]"|escapejs }}'>
-                <input type="text" placeholder="Ej: multitudes, alturas...">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="tab-pane fade" id="tab-privacidad">
-          <p class="text-soft mb-0">Más controles de privacidad llegarán aquí pronto.</p>
-        </div>
-      </div>
-
-      <div class="mt-4 d-flex justify-content-end">
-        <button type="submit" class="btn app-btn app-btn-primary px-4">Guardar cambios</button>
-      </div>
-    </div>
-  </form>
+  </div>
 </section>
-<script src="{% static 'js/profile.js' %}"></script>
+<script src="{% static 'js/profile_edit.js' %}"></script>
 {% endblock %}

@@ -1,4 +1,5 @@
 import json
+import logging
 
 from django.contrib import messages
 from django.contrib.auth import login
@@ -16,6 +17,8 @@ from django.views.decorators.http import require_GET, require_POST
 from core.forms import ProfileEditForm, RegisterForm
 from core.models import FriendRequest, Friendship, Plan, PlanItem, PlanLike, PlanSave, UserProfile
 from core.services.planner import PlanGenerationError, generate_plan_from_prompt
+
+logger = logging.getLogger(__name__)
 
 
 class AppLoginView(LoginView):
@@ -224,15 +227,22 @@ def profile_edit(request):
         user=request.user,
         defaults={'display_name': request.user.username},
     )
+
     if request.method == 'POST':
         form = ProfileEditForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Perfil actualizado.')
+            profile.refresh_from_db()
+            logger.info('Profile saved and reloaded for user_id=%s', request.user.id)
+            messages.success(request, 'Perfil actualizado ✅')
             return redirect('profile_edit')
+
+        messages.error(request, 'No se pudo guardar. Revisa los campos.')
+        logger.warning('ProfileEditForm errors: %s', form.errors.as_json())
     else:
         form = ProfileEditForm(instance=profile)
-    return render(request, 'core/profile_edit.html', {'form': form})
+
+    return render(request, 'core/profile_edit.html', {'form': form, 'profile': profile})
 
 
 @login_required
