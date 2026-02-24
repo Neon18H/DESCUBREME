@@ -1,0 +1,39 @@
+{% load static %}
+<!doctype html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Descubriendo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg glass-nav">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="{% url 'landing' %}">Descubriendo</a>
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-light btn-sm" href="{% url 'saved_plans' %}">Guardados</a>
+        <button id="darkModeToggle" class="btn btn-sm btn-dark">🌙</button>
+      </div>
+    </div>
+  </nav>
+
+  {% if messages %}
+  <div class="container mt-3">
+    {% for message in messages %}
+    <div class="alert alert-info">{{ message }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <main>{% block content %}{% endblock %}</main>
+
+  <div id="loadingOverlay" class="loading-overlay d-none">
+    <div class="spinner-border text-light"></div>
+    <p>Generando tu plan ideal...</p>
+  </div>
+
+  <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

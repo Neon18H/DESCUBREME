@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+  <h2 class="mb-4">Generar plan</h2>
+  <form method="post" id="planForm" class="glass-card p-4">
+    {% csrf_token %}
+    <div class="row g-3">
+      {% for field in form %}
+      <div class="col-md-6">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<small class="text-danger">{{ field.errors|striptags }}</small>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="mt-3 p-3 rounded summary-box">
+      <strong>Resumen en vivo:</strong>
+      <p id="selectionSummary" class="mb-0"></p>
+    </div>
+    <button class="btn btn-primary mt-3 animated-btn" type="submit">Generar plan con IA</button>
+  </form>
+</div>
+{% endblock %}

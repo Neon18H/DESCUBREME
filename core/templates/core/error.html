@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-5">
+  <div class="alert alert-danger">{{ message }}</div>
+  <a href="{% url 'generate_plan' %}" class="btn btn-primary">Volver</a>
+</div>
+{% endblock %}
