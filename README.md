@@ -67,3 +67,26 @@ Abrir: http://127.0.0.1:8000/
 - `core/services/openrouter_ai.py`: cliente OpenRouter + retry para JSON.
 - `core/services/planner.py`: orquestación y validación del plan.
 - `core/templates/`: landing, generar, resultados, guardados, detalle.
+
+
+## Deploy (Railway / Render / Heroku)
+This project is now ready for PaaS deployment with Gunicorn + WhiteNoise.
+
+### Required environment variables
+- `SECRET_KEY`
+- `DEBUG=False`
+- `ALLOWED_HOSTS=<your-domain>,<your-service>.onrender.com,<your-service>.up.railway.app`
+- `CSRF_TRUSTED_ORIGINS=https://<your-domain>,https://<your-service>.onrender.com,https://<your-service>.up.railway.app`
+- `DATABASE_URL`
+- API keys used by the app
+
+### Start command
+`Procfile` includes:
+- `release`: runs migrations and `collectstatic`
+- `web`: starts Gunicorn binding to `$PORT`
+
+If your provider does not run `release`, execute manually:
+```bash
+python manage.py migrate --noinput
+python manage.py collectstatic --noinput
+```
