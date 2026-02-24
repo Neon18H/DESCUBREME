@@ -2,17 +2,77 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev-key')
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
-ALLOWED_HOSTS = [host.strip() for host in os.getenv('ALLOWED_HOSTS', '*').split(',') if host.strip()]
 
-_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins.split(',') if origin.strip()]
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+
+def env_int(name: str, default: int = 0) -> int:
+    value = os.getenv(name)
+    if value is None or value.strip() == '':
+        return default
+    return int(value)
+
+
+def parse_csv_env(name: str, default: str = '') -> list[str]:
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(',') if item.strip()]
+
+
+def build_csrf_origins(hosts: list[str]) -> list[str]:
+    origins: list[str] = []
+    for host in hosts:
+        if host == '*' or '*' in host:
+            continue
+        normalized_host = host.lstrip('.')
+        if normalized_host in {'localhost', '127.0.0.1'}:
+            origins.extend([
+                f'http://{normalized_host}',
+                f'https://{normalized_host}',
+            ])
+            continue
+        origins.append(f'https://{normalized_host}')
+    # preserve order while removing duplicates
+    return list(dict.fromkeys(origins))
+
+
+DEBUG = env_bool('DEBUG', False)
+
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-local-dev-key'
+    else:
+        raise ImproperlyConfigured('SECRET_KEY is required when DEBUG=False.')
+
+allow_all_hosts = env_bool('ALLOW_ALL_HOSTS_IN_PROD', False)
+allowed_hosts_from_env = parse_csv_env('ALLOWED_HOSTS')
+if allowed_hosts_from_env:
+    ALLOWED_HOSTS = allowed_hosts_from_env
+elif allow_all_hosts:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.up.railway.app']
+
+csrf_from_env = parse_csv_env('CSRF_TRUSTED_ORIGINS')
+if csrf_from_env:
+    CSRF_TRUSTED_ORIGINS = csrf_from_env
+else:
+    csrf_defaults = []
+    public_url = os.getenv('PUBLIC_URL', '').strip()
+    if public_url:
+        csrf_defaults.append(public_url.rstrip('/'))
+    csrf_defaults.extend(build_csrf_origins(ALLOWED_HOSTS))
+    CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(csrf_defaults))
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -82,7 +142,14 @@ LANGUAGE_CODE = 'es-co'
 TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', True)
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_HSTS_SECONDS = env_int('SECURE_HSTS_SECONDS', 0)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', False)
+SECURE_HSTS_PRELOAD = env_bool('SECURE_HSTS_PRELOAD', False)
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'core' / 'static']
@@ -96,3 +163,36 @@ OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY', '')
 OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'meta-llama/llama-3.1-8b-instruct:free')
 OPENROUTER_BASE_URL = os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1/chat/completions')
 APP_REFERER = os.getenv('APP_REFERER', 'http://localhost:8000')
+
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'standard': {
+            'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'standard',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': LOG_LEVEL,
+    },
+    'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+            'propagate': False,
+        },
+    },
+}

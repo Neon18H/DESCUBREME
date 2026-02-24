@@ -38,8 +38,12 @@ DATABASE_URL=postgres://descubriendo_user:segura123@localhost:5432/descubriendo
 ## 4) Variables de entorno
 Completar en `.env`:
 - `SECRET_KEY`
-- `DEBUG=True`
+- `DEBUG`
 - `DATABASE_URL`
+- `ALLOWED_HOSTS`
+- `CSRF_TRUSTED_ORIGINS`
+- `PUBLIC_URL` (opcional)
+- `SECURE_SSL_REDIRECT` (opcional)
 - `GOOGLE_PLACES_API_KEY`
 - `OPENROUTER_API_KEY`
 - `OPENROUTER_MODEL` (por defecto free-tier)
@@ -68,25 +72,21 @@ Abrir: http://127.0.0.1:8000/
 - `core/services/planner.py`: orquestación y validación del plan.
 - `core/templates/`: landing, generar, resultados, guardados, detalle.
 
+## Deploy en Railway
 
-## Deploy (Railway / Render / Heroku)
-This project is now ready for PaaS deployment with Gunicorn + WhiteNoise.
-
-### Required environment variables
+### Railway Environment Variables
+Define estas variables en Railway:
 - `SECRET_KEY`
 - `DEBUG=False`
-- `ALLOWED_HOSTS=<your-domain>,<your-service>.onrender.com,<your-service>.up.railway.app`
-- `CSRF_TRUSTED_ORIGINS=https://<your-domain>,https://<your-service>.onrender.com,https://<your-service>.up.railway.app`
 - `DATABASE_URL`
-- API keys used by the app
+- `ALLOWED_HOSTS` (hosts separados por coma)
+- `CSRF_TRUSTED_ORIGINS` (orígenes https separados por coma)
+- `PUBLIC_URL` (opcional)
+- `SECURE_SSL_REDIRECT` (opcional)
+
+### Build / Release steps
+- Build step: `python manage.py collectstatic --noinput`
+- Migrate step: `python manage.py migrate`
 
 ### Start command
-`Procfile` includes:
-- `release`: runs migrations and `collectstatic`
-- `web`: starts Gunicorn binding to `$PORT`
-
-If your provider does not run `release`, execute manually:
-```bash
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
-```
+`Procfile` incluye el comando web con Gunicorn para Railway.
